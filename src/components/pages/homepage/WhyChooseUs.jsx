@@ -35,16 +35,16 @@ const features = [
 
 const WhyChooseUs = () => {
     return (
-        <section className="bg-base-100 py-16">
-            <div className="container mx-auto px-4">
+        <section className="bg-base-200/40 py-20">
+            <div className="max-w-7xl mx-auto px-4">
 
                 {/* Header */}
                 <div className="text-center mb-12">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-error mb-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-2">
                         Why DocAppoint
                     </p>
                     <h2 className="text-3xl md:text-4xl font-black text-base-content">
-                        Why <span className="text-error">Choose Us</span>
+                        Why <span className="text-primary">Choose Us</span>
                     </h2>
                     <p className="text-sm text-base-content/60 mt-2 max-w-md mx-auto">
                         We are committed to making healthcare accessible, reliable, and stress-free for everyone.
@@ -53,15 +53,15 @@ const WhyChooseUs = () => {
 
                 {/* Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {features.map((feature) => {
+                    {features.map((feature, i) => {
                         const Icon = feature.icon;
                         return (
                             <div
                                 key={feature.title}
-                                className="bg-base-200 border border-base-300 rounded-2xl p-6 flex flex-col gap-4 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
+                                className={`reveal card-lift bg-base-100 border border-base-300 rounded-2xl p-6 flex flex-col gap-4 group delay-${(i % 3) + 1}`}
                             >
-                                <div className="w-12 h-12 rounded-xl bg-error/10 border border-error/20 flex items-center justify-center group-hover:bg-error group-hover:border-error transition-all duration-300">
-                                    <Icon size={20} className="text-error group-hover:text-white transition-colors duration-300" />
+                                <div className="w-12 h-12 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center group-hover:bg-primary group-hover:ring-primary transition-all duration-300 shrink-0">
+                                    <Icon size={20} className="text-primary group-hover:text-primary-content transition-colors duration-300" />
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-base text-base-content mb-1">{feature.title}</h3>

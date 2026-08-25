@@ -1,7 +1,7 @@
 "use client";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SiGoogle } from "react-icons/si";
 import { Suspense, useState } from "react";
 import { FiMail, FiLock, FiArrowRight, FiEye, FiEyeOff } from "react-icons/fi";
@@ -9,6 +9,8 @@ import toast from "react-hot-toast";
 
 const SignInForm = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get("callbackUrl") || "/home";
     const [showPassword, setShowPassword] = useState(false);
 
     const onSubmit = async (e) => {
@@ -25,14 +27,14 @@ const SignInForm = () => {
             toast.error(error.message);
         } else {
             toast.success("Login Successful!");
-            router.push("/home");
+            router.push(callbackUrl);
         }
     };
 
     const handleGoogleLogin = async () => {
         const { error } = await authClient.signIn.social({
             provider: "google",
-            callbackURL: "/home",
+            callbackURL: callbackUrl,
         });
 
         if (error) {
@@ -41,22 +43,22 @@ const SignInForm = () => {
     };
 
     const inputClass =
-        "w-full pl-11 pr-11 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-error";
-    const onFocus = (e) => (e.target.style.borderColor = "hsl(var(--error))");
-    const onBlur = (e) => (e.target.style.borderColor = "hsl(var(--b3))");
+        "w-full pl-11 pr-11 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-primary";
+    const onFocus = (e) => (e.target.style.borderColor = "var(--color-primary)");
+    const onBlur = (e) => (e.target.style.borderColor = "var(--color-base-300)");
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 bg-linear-to-br from-base-200 via-base-300 to-base-200">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-base-200/50 brand-glow">
+            <div className="w-full max-w-md animate-fade-up">
 
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-black tracking-tight text-base-content">
-                        Doc<span className="text-error">Appoint</span>
+                        Doc<span className="text-gradient">Appoint</span>
                     </h1>
                     <p className="text-sm mt-1 text-base-content/60">Login to your account</p>
                 </div>
 
-                <div className="rounded-2xl p-8 border border-base-300 bg-base-100 shadow-2xl">
+                <div className="rounded-2xl p-8 border border-base-300 bg-base-100/90 backdrop-blur-sm shadow-xl shadow-base-content/5">
                     <form onSubmit={onSubmit} className="flex flex-col gap-5">
 
 
@@ -66,7 +68,7 @@ const SignInForm = () => {
                             </label>
                             <div className="relative">
                                 <FiMail
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-error"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-primary"
                                     size={15}
                                 />
                                 <input
@@ -88,14 +90,14 @@ const SignInForm = () => {
                                 </label>
                                 <Link
                                     href="/forgot-password"
-                                    className="text-xs text-error hover:text-error/70 font-medium transition-colors"
+                                    className="text-xs text-primary hover:text-primary/70 font-medium transition-colors"
                                 >
                                     Forgot Password?
                                 </Link>
                             </div>
                             <div className="relative">
                                 <FiLock
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-error"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-primary"
                                     size={15}
                                 />
                                 <input
@@ -110,7 +112,7 @@ const SignInForm = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-error transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-primary transition-colors"
                                 >
                                     {showPassword ? <FiEye size={15} />:<FiEyeOff size={15} />}
                                 </button>
@@ -120,7 +122,7 @@ const SignInForm = () => {
                         <div className="flex gap-3 mt-1">
                             <button
                                 type="submit"
-                                className="btn btn-error btn-outline flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold"
+                                className="btn btn-primary btn-outline flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold"
                             >
                                 Sign In <FiArrowRight size={15} />
                             </button>

@@ -1,43 +1,103 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { bookAppointment } from "@/lib/doctors";
 import toast from "react-hot-toast";
-import { FiX } from "react-icons/fi";
+import { FiX, FiCalendar, FiClock, FiAlertCircle } from "react-icons/fi";
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const weekdayOf = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(`${dateStr}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : WEEKDAYS[d.getDay()];
+};
 
 const BookingModal = ({ doctor }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [date, setDate] = useState("");
+    const [time, setTime] = useState("");
     const { data: session } = authClient.useSession();
 
     const inputClass =
-        "w-full px-4 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-error transition-all";
+        "w-full px-4 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all";
+
+    // Days the doctor actually publishes slots for.
+    const workingDays = useMemo(
+        () =>
+            (doctor.availability || [])
+                .filter((a) => Array.isArray(a.slots) && a.slots.length > 0)
+                .map((a) => a.day),
+        [doctor.availability]
+    );
+
+    const selectedWeekday = weekdayOf(date);
+
+    // Slots for the chosen date only — this is what the dropdown is built from,
+    // so a patient can never type an arbitrary time the doctor doesn't offer.
+    // A date the doctor has explicitly blocked (leave/holiday) beats the weekly
+    // pattern — mirror the server's rule so the UI can't offer a slot the API
+    // will refuse.
+    const isBlocked = useMemo(
+        () => Boolean(date) && ((doctor?.blockedDates) || []).includes(date),
+        [doctor, date]
+    );
+
+    const slots = useMemo(() => {
+        if (!selectedWeekday || isBlocked) return [];
+        const forDay = (doctor.availability || []).find((a) => a.day === selectedWeekday);
+        return Array.isArray(forDay?.slots) ? forDay.slots : [];
+    }, [doctor.availability, selectedWeekday, isBlocked]);
+
+    const dateChosenButClosed = Boolean(date) && slots.length === 0;
+    const canSubmit = Boolean(date) && Boolean(time) && slots.includes(time);
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const handleDateChange = (e) => {
+        setDate(e.target.value);
+        setTime(""); // a new date means a new slot list — never carry the old pick over
+    };
+
+    const close = () => {
+        setIsOpen(false);
+        setDate("");
+        setTime("");
+    };
 
     const onSubmit = async (e) => {
         e.preventDefault();
+        if (!canSubmit) return;
         setLoading(true);
 
         const formData = new FormData(e.currentTarget);
         const data = Object.fromEntries(formData.entries());
 
+        // Identity is no longer sent: the server reads it from the JWT.
         const appointmentData = {
-            userEmail: session?.user?.email,
-            doctorName: doctor.name,
             doctorId: doctor._id,
             patientName: data.patientName,
             gender: data.gender,
             phone: data.phone,
-            appointmentDate: data.appointmentDate,
-            appointmentTime: data.appointmentTime,
+            appointmentDate: date,
+            appointmentTime: time,
             reason: data.reason || "",
         };
 
         try {
             const { data: tokenData } = await authClient.token();
-            await bookAppointment(appointmentData, tokenData?.token);
+            const result = await bookAppointment(appointmentData, tokenData?.token);
+
+            // The server re-validates the slot, rejects double-bookings and
+            // unapproved doctors — show its reason rather than a blanket success.
+            if (result?.message && !result?.insertedId) {
+                toast.error(result.message);
+                return;
+            }
+
             toast.success("Appointment booked successfully!");
-            setIsOpen(false);
-            e.target.reset();
+            close();
         } catch {
             toast.error("Something went wrong. Please try again.");
         } finally {
@@ -49,54 +109,53 @@ const BookingModal = ({ doctor }) => {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="btn btn-error rounded-xl font-bold shadow-lg shadow-error/20"
+                className="btn btn-primary rounded-xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-transform duration-300"
             >
                 Book Appointment
             </button>
 
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-
                     <div
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                        onClick={() => setIsOpen(false)}
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
+                        onClick={close}
                     />
 
-                    <div className="relative bg-base-100 rounded-2xl border border-base-300 shadow-2xl w-full max-w-md z-10 max-h-[90vh] overflow-y-auto">
+                    <div className="relative bg-base-100 rounded-2xl border border-base-300 shadow-2xl w-full max-w-md z-10 max-h-[90vh] overflow-y-auto animate-fade-up">
 
-                        {/* Header */}
                         <div className="flex items-start justify-between p-6 pb-4">
                             <div>
                                 <h3 className="font-black text-xl text-base-content">Book Appointment</h3>
                                 <p className="text-sm text-base-content/50 mt-0.5">with {doctor.name}</p>
                             </div>
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="btn btn-sm btn-ghost btn-circle mt-1"
-                            >
+                            <button onClick={close} className="btn btn-sm btn-ghost btn-circle mt-1" aria-label="Close">
                                 <FiX size={16} />
                             </button>
                         </div>
 
                         <form onSubmit={onSubmit} className="px-6 pb-6 flex flex-col gap-4">
 
+                            {workingDays.length > 0 && (
+                                <div className="flex items-start gap-2 text-xs bg-primary/5 border border-primary/20 rounded-xl px-3 py-2.5">
+                                    <FiCalendar size={13} className="text-primary mt-0.5 shrink-0" />
+                                    <p className="text-base-content/70">
+                                        <span className="font-semibold text-base-content">Consults on:</span>{" "}
+                                        {workingDays.join(", ")}
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-base-content">
-                                    Patient Name <span className="text-error">*</span>
+                                    Patient Name <span className="text-primary">*</span>
                                 </label>
-                                <input
-                                    name="patientName"
-                                    type="text"
-                                    placeholder="Full name"
-                                    className={inputClass}
-                                    required
-                                />
+                                <input name="patientName" type="text" placeholder="Full name" className={inputClass} required />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-semibold text-base-content">
-                                        Gender <span className="text-error">*</span>
+                                        Gender <span className="text-primary">*</span>
                                     </label>
                                     <select name="gender" className={inputClass} required defaultValue="">
                                         <option value="" disabled>Select</option>
@@ -107,65 +166,89 @@ const BookingModal = ({ doctor }) => {
                                 </div>
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-semibold text-base-content">
-                                        Phone <span className="text-error">*</span>
+                                        Phone <span className="text-primary">*</span>
                                     </label>
-                                    <input
-                                        name="phone"
-                                        type="tel"
-                                        placeholder="01XXXXXXXXX"
-                                        className={inputClass}
-                                        required
-                                    />
+                                    <input name="phone" type="tel" placeholder="01XXXXXXXXX" className={inputClass} required />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-semibold text-base-content">
-                                        Date <span className="text-error">*</span>
-                                    </label>
-                                    <input
-                                        name="appointmentDate"
-                                        type="date"
-                                        min={new Date().toISOString().split("T")[0]}
-                                        className={inputClass}
-                                        required
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-sm font-semibold text-base-content">
-                                        Time <span className="text-error">*</span>
-                                    </label>
-                                    <input
-                                        name="appointmentTime"
-                                        type="time"
-                                        className={inputClass}
-                                        required
-                                    />
-                                </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-semibold text-base-content">
+                                    Date <span className="text-primary">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    min={today}
+                                    value={date}
+                                    onChange={handleDateChange}
+                                    className={inputClass}
+                                    required
+                                />
+                                {selectedWeekday && !dateChosenButClosed && (
+                                    <p className="text-xs text-base-content/45">{selectedWeekday}</p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-sm font-semibold text-base-content">
+                                    Time slot <span className="text-primary">*</span>
+                                </label>
+
+                                {/* A dropdown of the doctor's published slots, never a free
+                                    time field — and it stays disabled until a date picks
+                                    which day's slots apply. */}
+                                <select
+                                    value={time}
+                                    onChange={(e) => setTime(e.target.value)}
+                                    className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    disabled={!date || slots.length === 0}
+                                    required
+                                >
+                                    <option value="" disabled>
+                                        {!date
+                                            ? "Pick a date first"
+                                            : slots.length === 0
+                                                ? "No slots on this day"
+                                                : "Select a time slot"}
+                                    </option>
+                                    {slots.map((s) => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+
+                                {dateChosenButClosed && (
+                                    <p className="text-xs text-error flex items-start gap-1.5">
+                                        <FiAlertCircle size={12} className="mt-0.5 shrink-0" />
+                                        {isBlocked
+                                            ? `${doctor.name} has marked this date as unavailable.`
+                                            : `${doctor.name} doesn't consult on ${selectedWeekday}.`}{" "}
+                                        Please pick another date.
+                                    </p>
+                                )}
+
+                                {!dateChosenButClosed && slots.length > 0 && (
+                                    <p className="text-xs text-base-content/45 flex items-center gap-1.5">
+                                        <FiClock size={11} className="shrink-0" />
+                                        {slots.length} slot{slots.length !== 1 ? "s" : ""} available
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-base-content">
                                     Reason <span className="text-base-content/40 font-normal">(optional)</span>
                                 </label>
-                                <input
-                                    name="reason"
-                                    type="text"
-                                    placeholder="Brief reason for visit"
-                                    className={inputClass}
-                                />
+                                <input name="reason" type="text" placeholder="Brief reason for visit" className={inputClass} />
                             </div>
 
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="btn btn-error w-full rounded-xl font-bold mt-1 disabled:opacity-60"
+                                disabled={loading || !canSubmit}
+                                className="btn btn-primary w-full rounded-xl font-bold mt-1 disabled:opacity-60"
                             >
                                 {loading
                                     ? <span className="loading loading-spinner loading-xs" />
-                                    : "Confirm Booking"
-                                }
+                                    : "Confirm Booking"}
                             </button>
 
                         </form>

@@ -1,51 +1,56 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+import { FiSun, FiMoon } from "react-icons/fi";
+
+const LIGHT = "docappoint";
+const DARK = "docappoint-dark";
+
+// The <html data-theme> attribute is the source of truth — layout.js sets it
+// before first paint. Subscribing to it with useSyncExternalStore keeps React
+// in sync without a setState-inside-effect (and without a hydration mismatch,
+// since the server snapshot is always the light theme the server rendered).
+const subscribe = (onChange) => {
+    const observer = new MutationObserver(onChange);
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+};
+
+const getSnapshot = () => document.documentElement.getAttribute("data-theme") === DARK;
+const getServerSnapshot = () => false;
 
 const ThemeController = () => {
-    const [isDark, setIsDark] = useState(false);
-
-    useEffect(() => {
-        const saved = localStorage.getItem("theme");
-        const dark = saved === "dark";
-        setIsDark(dark);
-        document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-    }, [setIsDark]);
+    const isDark = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
     const handleToggle = () => {
         const dark = !isDark;
-        setIsDark(dark);
-        document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", dark ? DARK : LIGHT);
         localStorage.setItem("theme", dark ? "dark" : "light");
     };
 
     return (
         <button
             onClick={handleToggle}
-            className="btn btn-ghost btn-circle btn-sm text-base-content"
-            aria-label="Toggle theme"
+            className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
+            aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+            title={isDark ? "Light mode" : "Dark mode"}
         >
-            {isDark ? (
-                // Sun icon for light mode
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-5 h-5">
-                    <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" fill="none" stroke="currentColor">
-                        <circle cx="12" cy="12" r="4"></circle>
-                        <path d="M12 2v2"></path>
-                        <path d="M12 20v2"></path>
-                        <path d="m4.93 4.93 1.41 1.41"></path>
-                        <path d="m17.66 17.66 1.41 1.41"></path>
-                        <path d="M2 12h2"></path>
-                        <path d="M20 12h2"></path>
-                        <path d="m6.34 17.66-1.41 1.41"></path>
-                        <path d="m19.07 4.93-1.41 1.41"></path>
-                    </g>
-                </svg>
-            ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-5 h-5">
-                    <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" fill="none" stroke="currentColor">
-                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-                    </g>
-                </svg>
-            )}
+            <span className="relative block w-5 h-5">
+                <FiSun
+                    size={20}
+                    className={`absolute inset-0 transition-all duration-300 ${
+                        isDark ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-50"
+                    }`}
+                />
+                <FiMoon
+                    size={20}
+                    className={`absolute inset-0 transition-all duration-300 ${
+                        isDark ? "opacity-0 rotate-90 scale-50" : "opacity-100 rotate-0 scale-100"
+                    }`}
+                />
+            </span>
         </button>
     );
 };

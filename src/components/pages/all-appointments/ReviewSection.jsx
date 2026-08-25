@@ -60,23 +60,35 @@ const ReviewSection = ({ doctor }) => {
 
         setLoading(true);
 
-        const reviewData = {
-            rating,
-            comment,
-            userName: user.name,
-            userEmail: user.email,
-        };
+        // Only the rating and comment go over the wire — the server takes the
+        // reviewer's identity from the JWT so it can't be spoofed.
+        const reviewData = { rating, comment };
 
         try {
             const { data: tokenData } = await authClient.token();
-            await addReview(doctor._id, reviewData, tokenData?.token);
+            const result = await addReview(doctor._id, reviewData, tokenData?.token);
+
+            // The server rejects reviews without a completed visit, duplicates,
+            // and bad ratings — surface that instead of faking a success.
+            if (result?.message && !result?.acknowledged) {
+                toast.error(result.message);
+                return;
+            }
+
             const newReview = {
-                ...reviewData,
+                rating,
+                comment,
+                userName: user.name,
+                userEmail: user.email,
                 date: new Date().toISOString(),
             };
             setReviews((prev) => [newReview, ...prev]);
-            setLiveRating(parseFloat(((liveRating + rating) / 2).toFixed(1)));
-            setLiveTotalReviews((prev) => prev + 1);
+            // Mirror the server's running mean rather than the old halving formula.
+            setLiveTotalReviews((prevTotal) => {
+                const nextTotal = prevTotal + 1;
+                setLiveRating(parseFloat((((liveRating * prevTotal) + rating) / nextTotal).toFixed(1)));
+                return nextTotal;
+            });
             toast.success("Review submitted successfully!");
             setRating(0);
             setComment("");
@@ -88,11 +100,11 @@ const ReviewSection = ({ doctor }) => {
     };
 
     return (
-        <div className="container mx-auto px-4 pb-10">
+        <div className="max-w-7xl mx-auto px-4 pb-10">
 
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mb-6 flex items-center gap-4">
                 <div className="text-center px-6 border-r border-base-300">
-                    <p className="text-4xl font-black text-error">{liveRating}</p>
+                    <p className="text-4xl font-black text-primary">{liveRating}</p>
                     <StarDisplay rating={Math.round(liveRating)} />
                     <p className="text-xs text-base-content/40 mt-1">{liveTotalReviews} reviews</p>
                 </div>
@@ -112,7 +124,7 @@ const ReviewSection = ({ doctor }) => {
                     {!user ? (
                         <p className="text-sm text-base-content/50">
                             Please{" "}
-                            <a href="/signin" className="text-error font-semibold hover:underline">
+                            <a href="/signin" className="text-primary font-semibold hover:underline">
                                 login
                             </a>{" "}
                             to leave a review.
@@ -136,7 +148,7 @@ const ReviewSection = ({ doctor }) => {
                                     onChange={(e) => setComment(e.target.value)}
                                     placeholder="Share your experience with this doctor..."
                                     rows={4}
-                                    className="w-full px-4 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-error transition-all resize-none"
+                                    className="w-full px-4 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-primary transition-all resize-none"
                                     required
                                 />
                             </div>
@@ -144,7 +156,7 @@ const ReviewSection = ({ doctor }) => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="btn btn-error w-full rounded-xl font-bold flex items-center gap-2 disabled:opacity-60"
+                                className="btn btn-primary w-full rounded-xl font-bold flex items-center gap-2 disabled:opacity-60"
                             >
                                 {loading
                                     ? <span className="loading loading-spinner loading-xs" />
@@ -182,7 +194,7 @@ const ReviewSection = ({ doctor }) => {
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-error/10 border border-error/20 flex items-center justify-center text-xs font-black text-error shrink-0">
+                                            <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-black text-primary shrink-0">
                                                 {review.userName?.charAt(0).toUpperCase()}
                                             </div>
                                             <div>

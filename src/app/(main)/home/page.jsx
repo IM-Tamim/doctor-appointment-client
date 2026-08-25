@@ -1,8 +1,8 @@
 import HeroBanner from "@/components/pages/homepage/HeroBanner";
+import SpecialtyMarquee from "@/components/pages/homepage/SpecialtyMarquee";
 import PatientTestimonials from "@/components/pages/homepage/PatientTestimonials";
 import TopRatedDoctors from "@/components/pages/homepage/TopRatedDoctors";
 import WhyChooseUs from "@/components/pages/homepage/WhyChooseUs";
-
 
 export const metadata = {
     title: "Home | DocAppoint",
@@ -13,9 +13,10 @@ const HomePage = () => {
     return (
         <div>
             <HeroBanner />
-            <TopRatedDoctors/>
-            <WhyChooseUs/>
-            <PatientTestimonials/>
+            <SpecialtyMarquee />
+            <TopRatedDoctors />
+            <WhyChooseUs />
+            <PatientTestimonials />
         </div>
     );
 };

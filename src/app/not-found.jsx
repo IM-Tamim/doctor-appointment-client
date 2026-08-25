@@ -20,7 +20,7 @@ const NotFoundPage = () => {
 
             <button
                 onClick={() => router.push("/home")}
-                className="btn btn-error gap-2 rounded-xl text-sm font-bold shadow-lg hover:shadow-primary/20 transition-all"
+                className="btn btn-primary gap-2 rounded-xl text-sm font-bold shadow-lg hover:shadow-primary/20 transition-all"
             >
                 <FiArrowLeft size={15} />
                 Back to Home

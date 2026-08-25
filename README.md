@@ -1,223 +1,96 @@
 <div align="center">
 
-<img src="./src/assets/logo.png" alt="DocAppoint Logo" width="80" />
+# 🩺 DocAppoint — Client
 
-# DocAppoint
+### A role-based doctor appointment booking platform for Patients, Doctors & Admins
 
-### 🏥 Your Health, Our Priority
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![Better Auth](https://img.shields.io/badge/Auth-Better%20Auth-error)](https://www.better-auth.com/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+[![DaisyUI](https://img.shields.io/badge/UI-DaisyUI-5A0EF8)](https://daisyui.com/)
 
-**A modern full-stack Doctor Appointment Booking System built with Next.js 15, Better Auth, and MongoDB.**  
-Browse verified doctors, book appointments instantly, manage your bookings, and leave reviews — all in one place.
-
-<br />
-
-![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=flat-square&logo=next.js&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
-![DaisyUI](https://img.shields.io/badge/DaisyUI-5A0EF8?style=flat-square&logo=daisyui&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
-![Better Auth](https://img.shields.io/badge/Better_Auth-JWT-orange?style=flat-square)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
+**[🌐 Live Client](#)** · **[💻 Client Repo](#)** · **[⚙️ Live Server](#)** · **[🗄️ Server Repo](#)**
 
 </div>
 
 ---
 
-## 📌 Table of Contents
+## ✨ Overview
 
-- [Overview](#-overview)
-- [Live Links](#-live-links)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Pages & Routes](#-pages--routes)
-- [Authentication](#-authentication)
-- [Getting Started](#-getting-started)
-- [Environment Variables](#-environment-variables)
-- [Project Structure](#-project-structure)
+DocAppoint connects **patients**, **doctors**, and **platform admins** in one place: patients discover and book verified doctors, doctors manage their own schedule and patients from a dashboard, and admins gate every doctor onboarding behind a manual approval step — so nobody can list themselves as a doctor without review.
 
----
+## 👥 Three Roles, Three Experiences
 
-## 🔍 Overview
-
-**DocAppoint** is a full-stack healthcare appointment platform where patients can discover top-rated doctors across all specialties, book appointments in seconds, manage their schedule from a personal dashboard, and leave verified reviews. The platform is built with a focus on security, performance, and a clean user experience.
-
----
-
-## 🔗 Live Links
-
-| Resource | URL |
+| Role | What they can do |
 |---|---|
-| 🌐 **Client Live** | [https://doctor-appointment-client-woad.vercel.app](https://doctor-appointment-client-woad.vercel.app/) |
-| 💻 **Client Repository** | [https://github.com/IM-Tamim/doctor-appointment-client](https://github.com/IM-Tamim/doctor-appointment-client) |
-| 🖥️ **Server Live** | [https://doctor-appointment-server-ln61.onrender.com](https://doctor-appointment-server-ln61.onrender.com/) |
-| 📁 **Server Repository** | [https://github.com/IM-Tamim/doctor-appointment-server](https://github.com/IM-Tamim/doctor-appointment-server) |
+| 🧑‍🦰 **Patient** | Browse/search doctors, book appointments, manage bookings, leave ratings & reviews, apply to become a doctor |
+| 🩺 **Doctor** | View & manage own appointments (confirm/cancel/complete), set weekly availability, add prescriptions, edit profile |
+| 🛡️ **Admin** | Review & approve/reject doctor applications, manage all users (suspend/reactivate), view platform-wide stats |
 
----
+## 🚀 Features
 
-## ✨ Features
-
-### 🔐 Authentication & Security
-- Email/password registration with live password validation (uppercase, lowercase, min 6 characters)
-- Google OAuth one-click login and registration
-- JWT-based API protection using JWKS verification on the backend
-- Session-aware route protection — both server-side (middleware) and client-side (SessionGuard)
-- Logged-in users are never redirected away from private routes on page reload
-
-### 🩺 Doctor Discovery
-- Browse all available doctors in a responsive card grid
-- Real-time search by doctor name on the All Appointments page
-- Top 3 highest-rated doctors dynamically displayed on the home page
-- Each doctor card shows specialty, hospital, location, availability slots, rating, and fee
-
-### 📅 Appointment Booking
-- View complete doctor details — description, experience, hospital, time slots, and fee
-- Book an appointment via a clean modal — patient name, gender, phone, date, time, and optional reason
-- All bookings saved to MongoDB instantly with a success toast
-
-### 📊 Personal Dashboard
-- View all your appointments in one place — only your own bookings, filtered by email
-- **Update** any booking — pre-filled form with all existing details; doctor name and email are read-only
-- **Delete** any booking — double-confirmation modal to prevent accidental deletion
-- Instant UI updates after every action — no page reload required
-
-### 👤 Profile Management
-- View your name, email, and profile photo on the My Profile tab
-- Update your display name and photo URL via a clean modal
-- Profile photo updates reflect instantly in the navbar
-
-### ⭐ Doctor Reviews
-- Leave a star rating (1–5) and a written review for any doctor
-- Doctor's overall rating and total review count update live after submission — same formula as the backend
-- Home page testimonials section displays real 5-star reviews from patients using a Swiper.js autoplay slider
-
-### 🎨 UI & Experience
-- Light/Dark theme toggle — preference persisted to localStorage across sessions
-- Swiper.js slider for patient testimonials on the home page
-- Loading spinners while data is being fetched
-- Toast notifications for all success and error states — no default browser alerts
-- Fully responsive design across all screen sizes
-- Custom 404 page for invalid routes
-
----
+- 🔐 Email/password + Google OAuth via **Better Auth**, JWT-based role verification
+- 🩺 **Verified doctor onboarding** — credential submission → admin review → approval before going live
+- 📅 Doctor-managed **availability calendar** (day/slot based)
+- 🔔 **In-app + email notifications** on booking, status changes, and approvals (Nodemailer / Gmail SMTP)
+- 📄 **Prescription upload** after a completed visit (Cloudinary)
+- ⭐ Live-updating doctor ratings & reviews
+- 🌗 Light/dark theme toggle, fully responsive UI
+- 🧱 Clean architecture: server components fetch, client components handle interactivity, shared logic in `src/lib/`
 
 ## 🛠️ Tech Stack
 
-| Category | Technology |
-|---|---|
-| **Framework** | Next.js 15 (App Router) |
-| **Styling** | Tailwind CSS + DaisyUI |
-| **Authentication** | Better Auth + JWT plugin |
-| **Icons** | React Icons |
-| **Slider** | Swiper.js |
-| **Notifications** | React Hot Toast |
-| **HTTP Client** | Native Fetch API |
-| **Deployment** | Vercel |
+**Frontend:** Next.js 15 (App Router), Tailwind CSS, DaisyUI, Swiper.js
+**Auth:** Better Auth (JWT plugin, Google OAuth, role-based `additionalFields`)
+**File storage:** Cloudinary (free tier, unsigned uploads)
+**Deployment:** Vercel
 
----
-
-## 📄 Pages & Routes
-
-| Route | Access | Description |
-|---|---|---|
-| `/home` | Public | Hero banner, top doctors, why choose us, testimonials |
-| `/all-appointments` | Public | All doctors with search |
-| `/doctors/[id]` | 🔒 Private | Doctor details, booking modal, reviews |
-| `/dashboard` | 🔒 Private | My bookings + my profile |
-| `/signin` | Guest only | Login with email or Google |
-| `/signup` | Guest only | Register with email or Google |
-| `/forgot-password` | Guest only | Password reset info page |
-
----
-
-## 🔑 Authentication
-
-DocAppoint uses **Better Auth** with the **JWT plugin** for authentication.
-
-- On login, Better Auth issues a signed JWT accessible via `authClient.token()`
-- The JWT is sent as a `Bearer` token in the `Authorization` header for all protected API calls
-- The backend verifies the token using JWKS (`/api/auth/jwks`) via `jose-cjs` — no shared secret needed
-- Google OAuth is supported for both login and registration
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+
-- MongoDB Atlas account
-- Google OAuth credentials (for social login)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/IM-Tamim/doctor-appointment-client.git
-cd doctor-appointment-client
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env.local
-
-# Run the development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## 🔧 Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-# Better Auth
-BETTER_AUTH_SECRET=your_better_auth_secret
-NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# MongoDB
-MONGO_URI=your_mongodb_connection_string
-
-# Backend API
-NEXT_PUBLIC_SERVER_URL=http://localhost:8000
-```
-
----
-
-## 📁 Project Structure
+## 📂 Project Structure
 
 ```
 src/
 ├── app/
-│   ├── (auth)/               # Login, Register, Forgot Password
-│   ├── (main)/               # Home, All Appointments, Doctors, Dashboard
-│   ├── api/auth/             # Better Auth API handler
-│   ├── layout.js             # Root layout with SessionGuard
-│   └── not-found.jsx         # Custom 404 page
+│   ├── (auth)/              # signin, signup, forgot-password
+│   └── (main)/
+│       ├── home/            # landing page
+│       ├── all-appointments/  # doctor search & listing
+│       ├── doctors/[id]/    # doctor details + booking
+│       ├── apply-doctor/    # patient → doctor application
+│       └── dashboard/
+│           ├── patient/     # bookings & profile
+│           ├── doctor/      # appointments, availability, profile
+│           └── admin/       # approvals, users, overview
 ├── components/
-│   ├── pages/
-│   │   ├── all-appointments/ # DoctorsSearch, BookingModal, ReviewSection
-│   │   ├── dashboard/        # MyBookings, MyProfile, UpdateModal, DeleteModal
-│   │   └── homepage/         # HeroBanner, TopRatedDoctors, WhyChooseUs, PatientTestimonials
-│   ├── shared/               # Navbar, Footer, SessionGuard, ThemeController, NavLink
-│   └── ui/                   # DoctorCard
-├── lib/
-│   ├── auth.js               # Better Auth server config
-│   ├── auth-client.js        # Better Auth client config
-│   └── doctors.js            # All API fetch functions
-├── assets/                   # Logo and static assets
-└── proxy.js                  # Next.js middleware for route protection
+│   ├── shared/               # Navbar, Footer, SessionGuard, DashboardSidebar, NotificationBell...
+│   ├── pages/                 # feature-specific components, grouped by page
+│   └── ui/                    # small reusable UI pieces
+└── lib/                        # doctors.js, admin.js, notifications.js, auth.js, auth-client.js
 ```
+
+## ⚙️ Getting Started
+
+```bash
+git clone <this-repo>
+cd docappoint-client
+npm install
+cp .env.example .env   # fill in the values (see below)
+npm run dev
+```
+
+### Environment Variables
+
+See [`.env.example`](./.env.example) — you'll need a MongoDB Atlas connection string, Better Auth secret, Google OAuth credentials, your deployed server URL, and (optional but recommended) Cloudinary keys for file uploads.
+
+## 🔑 Creating the First Admin
+
+There is no public signup path to the admin role — sign up normally, then run the `make-admin.js` script in the **server** repo against your account's email.
+
+## 🧩 Related
+
+This is the **client**. The Express + MongoDB API lives in the companion **[docappoint-server](#)** repo.
 
 ---
 
 <div align="center">
-
-Made by **IMT**
-
+Built as a full-stack ICT semester project — RUET, ETE Dept.
 </div>

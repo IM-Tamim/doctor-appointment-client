@@ -83,22 +83,22 @@ const SignUpForm = () => {
         }
     };
 
-    const inputClass = "w-full pl-11 pr-11 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-error";
-    const onFocus = (e) => (e.target.style.borderColor = "hsl(var(--error))");
-    const onBlur = (e) => (e.target.style.borderColor = "hsl(var(--b3))");
+    const inputClass = "w-full pl-11 pr-11 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-primary";
+    const onFocus = (e) => (e.target.style.borderColor = "var(--color-primary)");
+    const onBlur = (e) => (e.target.style.borderColor = "var(--color-base-300)");
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-linear-to-br from-base-200 via-base-300 to-base-200">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-base-200/50 brand-glow">
+            <div className="w-full max-w-md animate-fade-up">
 
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-black tracking-tight text-base-content">
-                        Doc<span className="text-error">Appoint</span>
+                        Doc<span className="text-gradient">Appoint</span>
                     </h1>
                     <p className="text-sm mt-1 text-base-content/60">Create your account</p>
                 </div>
 
-                <div className="rounded-2xl p-8 border border-base-300 bg-base-100 shadow-2xl">
+                <div className="rounded-2xl p-8 border border-base-300 bg-base-100/90 backdrop-blur-sm shadow-xl shadow-base-content/5">
 
                     {formError && (
                         <div className="mb-4 px-4 py-3 rounded-xl bg-error/10 border border-error/30 text-error text-sm font-medium flex items-start gap-2">
@@ -115,14 +115,14 @@ const SignUpForm = () => {
                             </label>
                             <div className="relative">
                                 <FiUser
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-error"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-primary"
                                     size={15}
                                 />
                                 <input
                                     name="name"
                                     type="text"
                                     placeholder="Your Full Name"
-                                    className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-error"
+                                    className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-primary"
                                     onFocus={onFocus}
                                     onBlur={onBlur}
                                     required
@@ -137,14 +137,14 @@ const SignUpForm = () => {
                             </label>
                             <div className="relative">
                                 <FiMail
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-error"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-primary"
                                     size={15}
                                 />
                                 <input
                                     name="email"
                                     type="email"
                                     placeholder="name@gmail.com"
-                                    className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-error"
+                                    className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-primary"
                                     onFocus={onFocus}
                                     onBlur={onBlur}
                                     required
@@ -158,14 +158,14 @@ const SignUpForm = () => {
                             </label>
                             <div className="relative">
                                 <FiImage
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-error"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-primary"
                                     size={15}
                                 />
                                 <input
                                     name="photo"
                                     type="url"
                                     placeholder="https://example.com/photo.jpg"
-                                    className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-error"
+                                    className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-primary"
                                     onFocus={onFocus}
                                     onBlur={onBlur}
                                 />
@@ -178,7 +178,7 @@ const SignUpForm = () => {
                             </label>
                             <div className="relative">
                                 <FiLock
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-error"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-primary"
                                     size={15}
                                 />
                                 <input
@@ -188,7 +188,7 @@ const SignUpForm = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className={`${inputClass} ${passwordTouched && !allRulesPassed
-                                            ? "border-error"
+                                            ? "border-primary"
                                             : passwordTouched && allRulesPassed
                                                 ? "border-success"
                                                 : ""
@@ -203,7 +203,7 @@ const SignUpForm = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-error transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-primary transition-colors"
                                 >
                                     {showPassword ? <FiEye size={15} /> : <FiEyeOff size={15} />}
                                 </button>
@@ -225,7 +225,7 @@ const SignUpForm = () => {
                         <div className="flex gap-3 mt-1">
                             <button
                                 type="submit"
-                                className="btn btn-error btn-outline flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold"
+                                className="btn btn-primary btn-outline flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold"
                             >
                                 Register <FiArrowRight size={15} />
                             </button>

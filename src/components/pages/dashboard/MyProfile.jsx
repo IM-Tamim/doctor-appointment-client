@@ -3,18 +3,25 @@ import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 import Image from "next/image";
-import { FiUser, FiMail, FiImage, FiEdit2 } from "react-icons/fi";
+import { FiUser, FiMail, FiEdit2 } from "react-icons/fi";
 import { FiX } from "react-icons/fi";
+import CloudinaryUpload from "@/components/shared/CloudinaryUpload";
 
 const MyProfile = () => {
     const { data: session, isPending } = authClient.useSession();
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [imageUrl, setImageUrl] = useState("");
 
     const user = session?.user;
 
     const inputClass =
-        "w-full px-4 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-error transition-all";
+        "w-full px-4 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-primary transition-all";
+
+    const openModal = () => {
+        setImageUrl(user?.image || "");
+        setIsOpen(true);
+    };
 
     const onSubmit = async (e) => {
         e.preventDefault();
@@ -26,7 +33,7 @@ const MyProfile = () => {
         try {
             await authClient.updateUser({
                 name: data.name,
-                image: data.photo || user?.image,
+                image: imageUrl || user?.image,
             });
             toast.success("Profile updated successfully!");
             setIsOpen(false);
@@ -40,7 +47,7 @@ const MyProfile = () => {
     if (isPending) {
         return (
             <div className="flex justify-center py-24">
-                <span className="loading loading-spinner loading-lg text-error" />
+                <span className="loading loading-spinner loading-lg text-primary" />
             </div>
         );
     }
@@ -50,7 +57,7 @@ const MyProfile = () => {
             <div className="max-w-md mx-auto">
                 <div className="bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
 
-                    <div className="h-24 bg-error/10 border-b border-base-300" />
+                    <div className="h-24 bg-primary/10 border-b border-base-300" />
                     <div className="px-6 pb-6">
                         <div className="relative flex items-end justify-between -mt-10 mb-4">
                             <div className="relative w-20 h-20 rounded-2xl border-4 border-base-100 overflow-hidden bg-base-200">
@@ -75,14 +82,14 @@ const MyProfile = () => {
 
                         <div className="mt-5 flex flex-col gap-3">
                             <div className="flex items-center gap-3 bg-base-200 border border-base-300 rounded-xl px-4 py-3">
-                                <FiUser size={15} className="text-error shrink-0" />
+                                <FiUser size={15} className="text-primary shrink-0" />
                                 <div>
                                     <p className="text-xs text-base-content/40">Full Name</p>
                                     <p className="text-sm font-semibold text-base-content">{user?.name}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 bg-base-200 border border-base-300 rounded-xl px-4 py-3">
-                                <FiMail size={15} className="text-error shrink-0" />
+                                <FiMail size={15} className="text-primary shrink-0" />
                                 <div>
                                     <p className="text-xs text-base-content/40">Email Address</p>
                                     <p className="text-sm font-semibold text-base-content">{user?.email}</p>
@@ -91,8 +98,8 @@ const MyProfile = () => {
                         </div>
 
                         <button
-                            onClick={() => setIsOpen(true)}
-                            className="btn btn-error btn-outline w-full rounded-xl font-bold mt-5 flex items-center gap-2"
+                            onClick={openModal}
+                            className="btn btn-primary btn-outline w-full rounded-xl font-bold mt-5 flex items-center gap-2"
                         >
                             <FiEdit2 size={14} /> Update Profile
                         </button>
@@ -120,10 +127,10 @@ const MyProfile = () => {
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-base-content">
-                                    Name <span className="text-error">*</span>
+                                    Name <span className="text-primary">*</span>
                                 </label>
                                 <div className="relative">
-                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-error" size={14} />
+                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
                                     <input
                                         name="name"
                                         type="text"
@@ -136,18 +143,14 @@ const MyProfile = () => {
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-base-content">
-                                    Photo URL
+                                    Profile Picture
                                 </label>
-                                <div className="relative">
-                                    <FiImage className="absolute left-4 top-1/2 -translate-y-1/2 text-error" size={14} />
-                                    <input
-                                        name="photo"
-                                        type="url"
-                                        defaultValue={user?.image}
-                                        placeholder="https://example.com/photo.jpg"
-                                        className={`${inputClass} pl-10`}
-                                    />
-                                </div>
+                                <CloudinaryUpload
+                                    value={imageUrl}
+                                    onChange={setImageUrl}
+                                    accept="image/*"
+                                    label=""
+                                />
                             </div>
 
                             <div className="flex gap-3 mt-2">
@@ -161,7 +164,7 @@ const MyProfile = () => {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="btn btn-error flex-1 rounded-xl font-bold disabled:opacity-60"
+                                    className="btn btn-primary flex-1 rounded-xl font-bold disabled:opacity-60"
                                 >
                                     {loading
                                         ? <span className="loading loading-spinner loading-xs" />

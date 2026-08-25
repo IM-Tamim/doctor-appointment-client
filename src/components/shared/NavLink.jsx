@@ -12,7 +12,7 @@ const NavLink = ({ href, children, matchPaths = [] }) => {
     return (
         <Link
             href={href}
-            className={`${isActive ? "font-semibold border-b-2 border-error text-error" : "text-base-content hover:text-error transition-colors"}`}
+            className={`${isActive ? "font-semibold border-b-2 border-primary text-primary" : "text-base-content hover:text-primary transition-colors"}`}
         >
             {children}
         </Link>

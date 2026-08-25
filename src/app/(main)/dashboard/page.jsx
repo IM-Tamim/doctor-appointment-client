@@ -13,7 +13,7 @@ const DashboardPage = () => {
             <div className="bg-base-200 border-b border-base-300">
                 <div className="container mx-auto px-4 py-8">
                     <h1 className="text-2xl md:text-3xl font-black text-base-content text-center">
-                        My <span className="text-error">Dashboard</span>
+                        My <span className="text-primary">Dashboard</span>
                     </h1>
                 </div>
             </div>
