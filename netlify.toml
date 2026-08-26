@@ -1,0 +1,14 @@
+# Deterministic build config so the deploy doesn't depend on UI settings.
+# Netlify auto-detects Next.js, but pinning this makes the build reproducible
+# and self-documenting in the repo.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next 16 needs a modern Node; Netlify's default can lag behind.
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
