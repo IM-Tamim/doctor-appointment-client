@@ -51,7 +51,7 @@ const Navbar = () => {
     };
 
     return (
-        <div className="sticky top-0 z-50 backdrop-blur-md bg-base-100/85 border-b border-base-300 shadow-lg">
+        <div className="sticky top-0 z-50 backdrop-blur-md bg-base-100/85 border-b border-base-300 shadow-lg safe-top safe-x">
             <div className="navbar max-w-7xl mx-auto">
                 <div className="navbar-start gap-1">
                     {/* Inside /dashboard the layout renders its own drawer toggle,
