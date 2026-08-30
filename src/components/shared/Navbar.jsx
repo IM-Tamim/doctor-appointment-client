@@ -133,7 +133,7 @@ const Navbar = () => {
                             </Link>
                             <Link
                                 href="/signup"
-                                className="btn btn-sm btn-primary btn-soft rounded-lg text-sm font-bold"
+                                className="btn btn-sm btn-primary btn-soft rounded-lg text-sm font-bold hidden sm:inline-flex"
                             >
                                 Register
                             </Link>
