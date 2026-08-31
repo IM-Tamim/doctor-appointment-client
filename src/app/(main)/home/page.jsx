@@ -1,4 +1,5 @@
 import HeroBanner from "@/components/pages/homepage/HeroBanner";
+import InstallAppSection from "@/components/pages/homepage/InstallAppSection";
 import SpecialtyMarquee from "@/components/pages/homepage/SpecialtyMarquee";
 import PatientTestimonials from "@/components/pages/homepage/PatientTestimonials";
 import TopRatedDoctors from "@/components/pages/homepage/TopRatedDoctors";
@@ -16,6 +17,7 @@ const HomePage = () => {
             <SpecialtyMarquee />
             <TopRatedDoctors />
             <WhyChooseUs />
+            <InstallAppSection />
             <PatientTestimonials />
         </div>
     );

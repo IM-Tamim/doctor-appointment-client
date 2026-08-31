@@ -3,7 +3,6 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import SessionGuard from "@/components/shared/SessionGuard";
 import ServiceWorker from "@/components/shared/ServiceWorker";
-import InstallPrompt from "@/components/shared/InstallPrompt";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -72,7 +71,6 @@ export default function RootLayout({ children }) {
         {children}
         <SessionGuard />
         <ServiceWorker />
-        <InstallPrompt />
         <Toaster
           position="top-center"
           toastOptions={{

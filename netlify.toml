@@ -12,3 +12,13 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Serve the Android build as a real download.
+# Netlify would otherwise send an unknown extension as application/octet-stream,
+# which mostly works but leaves the filename and handling up to the browser.
+[[headers]]
+  for = "/docappoint.apk"
+  [headers.values]
+    Content-Type = "application/vnd.android.package-archive"
+    Content-Disposition = "attachment; filename=\"DocAppoint.apk\""
+    Cache-Control = "public, max-age=3600"
