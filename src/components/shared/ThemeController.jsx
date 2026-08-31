@@ -6,9 +6,12 @@ const LIGHT = "docappoint";
 const DARK = "docappoint-dark";
 
 // The <html data-theme> attribute is the source of truth — layout.js sets it
-// before first paint. Subscribing to it with useSyncExternalStore keeps React
-// in sync without a setState-inside-effect (and without a hydration mismatch,
-// since the server snapshot is always the light theme the server rendered).
+// from localStorage before first paint.
+const readTheme = () =>
+    typeof document === "undefined"
+        ? false
+        : document.documentElement.getAttribute("data-theme") === DARK;
+
 const subscribe = (onChange) => {
     const observer = new MutationObserver(onChange);
     observer.observe(document.documentElement, {
@@ -18,16 +21,22 @@ const subscribe = (onChange) => {
     return () => observer.disconnect();
 };
 
-const getSnapshot = () => document.documentElement.getAttribute("data-theme") === DARK;
 const getServerSnapshot = () => false;
 
 const ThemeController = () => {
-    const isDark = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+    // Only used for the accessible label. It is `false` on the server and for
+    // the hydration render, so it can briefly disagree with the real theme —
+    // which is exactly why the click handler below must NOT depend on it.
+    const isDark = useSyncExternalStore(subscribe, readTheme, getServerSnapshot);
 
     const handleToggle = () => {
-        const dark = !isDark;
-        document.documentElement.setAttribute("data-theme", dark ? DARK : LIGHT);
-        localStorage.setItem("theme", dark ? "dark" : "light");
+        // Read the DOM, not React state. During hydration `isDark` is still the
+        // server snapshot (false), so `!isDark` computed "switch to dark" while
+        // the page was *already* dark — the first click did nothing, and only
+        // after the observer corrected the state did toggling start working.
+        const next = !readTheme();
+        document.documentElement.setAttribute("data-theme", next ? DARK : LIGHT);
+        localStorage.setItem("theme", next ? "dark" : "light");
     };
 
     return (
@@ -35,8 +44,11 @@ const ThemeController = () => {
             onClick={handleToggle}
             className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
             aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-            title={isDark ? "Light mode" : "Dark mode"}
+            title="Toggle theme"
         >
+            {/* Icon follows React state. For one frame after hydration this can
+                show the light icon while the page is already dark — cosmetic
+                only. The click handler deliberately does NOT read this value. */}
             <span className="relative block w-5 h-5">
                 <FiSun
                     size={20}
