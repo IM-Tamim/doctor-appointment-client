@@ -1,5 +1,5 @@
 "use client";
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { FiSun, FiMoon } from "react-icons/fi";
 
 const LIGHT = "docappoint";
@@ -24,6 +24,30 @@ const subscribe = (onChange) => {
 const getServerSnapshot = () => false;
 
 const ThemeController = () => {
+    // Re-assert the stored theme once, after hydration.
+    //
+    // The inline script in layout.js sets <html data-theme> before first paint,
+    // but React then reconciles that element and drops the attribute because it
+    // isn't in the JSX — so every reload ended up on the default (light) theme
+    // no matter what was stored. Writing it back here runs after hydration, so
+    // React has nothing left to undo. No setState involved: this is a plain
+    // sync to an external system (the DOM), which is what effects are for.
+    useEffect(() => {
+        let stored = null;
+        try {
+            stored = localStorage.getItem("theme");
+        } catch {
+            /* private mode */
+        }
+        const dark = stored
+            ? stored === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const want = dark ? DARK : LIGHT;
+        if (document.documentElement.getAttribute("data-theme") !== want) {
+            document.documentElement.setAttribute("data-theme", want);
+        }
+    }, []);
+
     // Only used for the accessible label. It is `false` on the server and for
     // the hydration render, so it can briefly disagree with the real theme —
     // which is exactly why the click handler below must NOT depend on it.

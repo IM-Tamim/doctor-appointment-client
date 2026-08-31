@@ -17,6 +17,12 @@ if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD,
     },
+    // Serverless functions are killed at ~10s. Without explicit timeouts a
+    // host that blocks outbound SMTP leaves this hanging past that limit and
+    // the whole reset request dies with no useful error.
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
   });
 }
 
