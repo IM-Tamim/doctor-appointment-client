@@ -3,6 +3,7 @@ import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiGoogle } from "react-icons/si";
+import { useInNativeApp } from "@/lib/useInNativeApp";
 import { FiUser, FiMail, FiLock, FiImage, FiArrowRight, FiCheck, FiX, FiEye, FiEyeOff } from "react-icons/fi";
 import { Suspense, useState } from "react";
 import toast from "react-hot-toast";
@@ -71,6 +72,8 @@ const SignUpForm = () => {
             router.push("/signin");
         }
     };
+
+    const inNativeApp = useInNativeApp();
 
     const handleGoogleLogin = async () => {
         const { error } = await authClient.signIn.social({
@@ -248,14 +251,27 @@ const SignUpForm = () => {
                             <div className="flex-1 h-px bg-base-300" />
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={handleGoogleLogin}
-                            className="btn btn-primary btn-soft w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium"
-                        >
-                            <SiGoogle size={15} />
-                            Continue with Google
-                        </button>
+                        {/* Google blocks its OAuth flow inside embedded WebViews
+                            ("disallowed_useragent"), so in the Android app the
+                            handshake escapes to the system browser and the session
+                            cookie lands there instead of in the app. Rather than
+                            show a button that silently fails, the app gets a note
+                            and uses email/password. */}
+                        {inNativeApp ? (
+                            <p className="text-xs text-center text-base-content/50 bg-base-200/60 border border-base-300 rounded-xl px-3 py-2.5">
+                                Google sign-in isn&apos;t available in the app. Please use your
+                                email and password above, or sign in on the website.
+                            </p>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={handleGoogleLogin}
+                                className="btn btn-primary btn-soft w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium"
+                            >
+                                <SiGoogle size={15} />
+                                Continue with Google
+                            </button>
+                        )}
 
                         <p className="text-center text-sm text-base-content/60">
                             Already have an account?{" "}

@@ -59,12 +59,12 @@ const themeScript = `
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="en"
-      data-theme="docappoint"
-      className={geist.variable}
-      suppressHydrationWarning
-    >
+    // No data-theme here on purpose. When React owns that attribute it
+    // reconciles it back to this value during hydration, wiping out whatever
+    // the inline script below set from localStorage — which is exactly why the
+    // app snapped back to light on every refresh. Leaving it off means React
+    // has no opinion about the attribute and the script is the only owner.
+    <html lang="en" className={geist.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
