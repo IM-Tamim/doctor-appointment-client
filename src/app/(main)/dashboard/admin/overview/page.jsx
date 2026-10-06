@@ -67,6 +67,11 @@ const AdminOverviewPage = () => {
                     </button>
                 </div>
             ) : (
+                <>
+                {/* These four are live totals for the whole platform, not the
+                    range below — labelling them stops the range buttons looking
+                    broken when these numbers stay put. */}
+                <p className="text-xs font-semibold uppercase tracking-widest text-base-content/45">{t("allTime")}</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {CARDS.map(({ key, icon: Icon, color }) => (
                         <div key={key} className="bg-base-100 rounded-2xl border border-base-300 p-5 flex items-center gap-4">
@@ -80,10 +85,15 @@ const AdminOverviewPage = () => {
                         </div>
                     ))}
                 </div>
+                </>
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <h2 className="text-lg font-black">{t("analytics")}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-black">{t("analytics")}</h2>
+                    {a && <span className="text-xs text-base-content/50">{date(a.range.from)} → {date(a.range.to)}</span>}
+                    {analytics.refreshing && <span className="loading loading-spinner loading-xs text-primary" />}
+                </div>
                 <div className="join" role="group" aria-label={t("range")}>
                     {RANGES.map((r) => (
                         <button
@@ -105,11 +115,11 @@ const AdminOverviewPage = () => {
                     {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
                 </div>
             ) : (
-                <>
+                <div className={analytics.refreshing ? "opacity-60 transition-opacity space-y-6" : "transition-opacity space-y-6"}>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
                             { label: t("net"), value: taka(a.totals.revenue), hint: t("refunded", { amount: taka(a.totals.refunded) }) },
-                            { label: t("bookings"), value: number(a.totals.bookings), hint: `${date(a.range.from)} → ${date(a.range.to)}` },
+                            { label: t("bookings"), value: number(a.totals.bookings), hint: a.range.days === 365 ? t("year") : t("days", { count: number(a.range.days) }) },
                             { label: t("cancelRate"), value: pct(a.totals.cancellationRate), hint: t("cancelled", { count: number(a.totals.status.cancelled || 0) }) },
                             { label: t("noShowRate"), value: pct(a.totals.noShowRate), hint: t("visits", { noShow: number(a.totals.status.no_show || 0), total: number((a.totals.status.completed || 0) + (a.totals.status.no_show || 0)) }) },
                         ].map((tile) => (
@@ -150,7 +160,7 @@ const AdminOverviewPage = () => {
                             </div>
                         )}
                     </section>
-                </>
+                </div>
             )}
         </div>
     );

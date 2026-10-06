@@ -261,3 +261,51 @@ export const DOCTORS = ROWS.map(([gender, name, specialty, hospitalKey, years, f
   followUpFeePercent: 50,
   image,
 }));
+
+/**
+ * Hospital managers (role "hospital_admin"). Each one runs exactly the hospital
+ * named here, which must match a HOSPITALS entry. Used by both seed.mjs (full
+ * reset) and seed-managers.mjs (idempotent top-up on a live database).
+ */
+export const MANAGERS = [
+  {
+    name: "Square Hospital Manager",
+    email: "manager.square@docappoint.test",
+    password: "manager@123",
+    phone: "01977000001",
+    image: "https://randomuser.me/api/portraits/men/32.jpg",
+    hospitalName: "Square Hospitals Ltd.",
+  },
+  {
+    name: "Evercare Dhaka Manager",
+    email: "manager.evercare@docappoint.test",
+    password: "manager@123",
+    phone: "01977000002",
+    image: "https://randomuser.me/api/portraits/women/44.jpg",
+    hospitalName: "Evercare Hospital Dhaka",
+  },
+  {
+    name: "United Hospital Manager",
+    email: "manager.united@docappoint.test",
+    password: "manager@123",
+    phone: "01977000003",
+    image: "https://randomuser.me/api/portraits/men/64.jpg",
+    hospitalName: "United Hospital Limited",
+  },
+  {
+    name: "Labaid Manager",
+    email: "manager.labaid@docappoint.test",
+    password: "manager@123",
+    phone: "01977000004",
+    image: "https://randomuser.me/api/portraits/women/68.jpg",
+    hospitalName: "Labaid Specialized Hospital",
+  },
+  {
+    name: "Chattogram Medical Manager",
+    email: "manager.cmch@docappoint.test",
+    password: "manager@123",
+    phone: "01977000005",
+    image: "https://randomuser.me/api/portraits/men/75.jpg",
+    hospitalName: "Chittagong Medical College Hospital",
+  },
+];

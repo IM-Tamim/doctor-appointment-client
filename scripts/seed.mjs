@@ -17,7 +17,7 @@ dotenv.config();
 
 const { auth } = await import("../src/lib/auth.js");
 const { MongoClient } = await import("mongodb");
-const { HOSPITALS, DOCTORS, SCHEDULES, bioFor, hospitalDoc } = await import("./seed-data.mjs");
+const { HOSPITALS, DOCTORS, SCHEDULES, MANAGERS, bioFor, hospitalDoc } = await import("./seed-data.mjs");
 const { buildHistory, buildDonors, AMBULANCE_PLAN, clinicToday, addDays } = await import("./seed-history.mjs");
 const { ObjectId } = await import("mongodb");
 
@@ -43,14 +43,6 @@ const PATIENTS = [
   { name: "Rima Akter", email: "rima.akter@docappoint.test", password: "patient@123", phone: "01911000009", image: "https://randomuser.me/api/portraits/women/64.jpg" },
   { name: "Jahid Hasan", email: "jahid.hasan@docappoint.test", password: "patient@123", phone: "01911000010", image: "https://randomuser.me/api/portraits/men/52.jpg" },
 ];
-
-// A hospital manager (role "hospital_admin") for Square Hospitals.
-const MANAGER = {
-  name: "Square Hospital Manager",
-  email: "manager.square@docappoint.test",
-  password: "manager@123",
-  hospitalKey: "square",
-};
 
 // ── Reviews ─────────────────────────────────────────────────────────────
 
@@ -203,13 +195,18 @@ async function run() {
     patientDocs.push({ ...p, _id: user._id, gender: p.image.includes("/women/") ? "Female" : "Male" });
   }
 
-  console.log("\nSeeding hospital manager...");
-  const managerUser = await signUpOrGetExisting(MANAGER);
-  await db.collection("user").updateOne(
-    { _id: managerUser._id },
-    { $set: { role: "hospital_admin", status: "active", hospitalId: hospitalByKey[MANAGER.hospitalKey].id } }
-  );
-  console.log(`  ${MANAGER.email} manages ${hospitalByKey[MANAGER.hospitalKey].name}`);
+  console.log("\nSeeding hospital managers...");
+  const hospitalIdByName = new Map(Object.values(hospitalByKey).map((h) => [h.name, h.id]));
+  for (const m of MANAGERS) {
+    const hospitalId = hospitalIdByName.get(m.hospitalName);
+    if (!hospitalId) throw new Error(`Unknown hospital "${m.hospitalName}" for ${m.email}`);
+    const managerUser = await signUpOrGetExisting(m);
+    await db.collection("user").updateOne(
+      { _id: managerUser._id },
+      { $set: { role: "hospital_admin", status: "active", hospitalId, phone: m.phone, image: m.image } }
+    );
+    console.log(`  ${m.email} manages ${m.hospitalName}`);
+  }
 
   console.log("\nSeeding appointment history (past 60 days, today, next week)...");
   const { appointments, payments, receiptCount, year } = buildHistory({
@@ -265,7 +262,7 @@ async function run() {
   console.log(`Admin login:   ${ADMIN.email} / ${ADMIN.password}`);
   console.log(`Doctor login:  any doctor email (e.g. ${DOCTORS[0].email}) / doctor@123`);
   console.log(`Patient login: any patient email (e.g. ${PATIENTS[0].email}) / patient@123`);
-  console.log(`Hospital manager: ${MANAGER.email} / ${MANAGER.password}`);
+  console.log(`Manager login: any manager email (e.g. ${MANAGERS[0].email}) / ${MANAGERS[0].password}`);
   console.log("──────────────────────────────────────────");
 
   await client.close();

@@ -76,7 +76,10 @@ const CloudinaryUpload = ({ value, onChange, label, accept = "image/*,.pdf" }) =
                 </div>
             ) : null}
 
-            <div className="flex gap-2">
+            {/* Wraps on narrow screens: side by side the paste field drops to
+                ~150px inside a phone-width form card, which truncates both the
+                placeholder and any URL already in it. */}
+            <div className="flex flex-wrap gap-2">
                 <input
                     ref={inputRef}
                     type="file"
@@ -101,7 +104,7 @@ const CloudinaryUpload = ({ value, onChange, label, accept = "image/*,.pdf" }) =
                     value={value || ""}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={t("paste")}
-                    className="input input-bordered input-sm flex-1"
+                    className="input input-bordered input-sm flex-1 min-w-48"
                 />
             </div>
         </div>

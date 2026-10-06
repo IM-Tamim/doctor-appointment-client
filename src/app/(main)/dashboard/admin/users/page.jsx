@@ -7,11 +7,91 @@ import { getAllUsers, suspendUser, reactivateUser } from "@/lib/admin";
 import Pagination from "@/components/shared/Pagination";
 import { fetchHospitalOptions } from "@/lib/hospitals";
 import { setHospitalManager } from "@/lib/emergency";
+import { FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
 const ROLE_FILTERS = ["all", "patient", "doctor", "hospital_admin", "admin"];
 const PAGE_SIZE = 8;
+
+/**
+ * Hospital picker for the "make manager" action.
+ *
+ * This used to be an inline <select> that dismissed itself on blur. Opening a
+ * native select popup can blur the element on some platforms, which unmounted
+ * the control the moment it was clicked — the list looked like it refused to
+ * open. A modal has no blur race, survives a mis-click, and gives 20+ hospitals
+ * somewhere to be searched.
+ */
+const HospitalPicker = ({ user, hospitals, onCancel, onPick }) => {
+    const t = useTranslations("admin.users");
+    const tc = useTranslations("common");
+    const [q, setQ] = useState("");
+    const [picked, setPicked] = useState(user.hospitalId || "");
+
+    const needle = q.trim().toLowerCase();
+    const matches = needle
+        ? hospitals.filter((h) => `${h.name} ${h.city || ""}`.toLowerCase().includes(needle))
+        : hospitals;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+            <div className="relative z-10 w-full max-w-md bg-base-100 rounded-2xl border border-base-300 shadow-2xl flex flex-col max-h-[85vh]">
+                <div className="flex items-start justify-between gap-3 p-5 pb-3">
+                    <div className="min-w-0">
+                        <h3 className="font-black text-lg">{t("assignTitle", { name: user.name })}</h3>
+                        <p className="text-sm text-base-content/50 mt-0.5">{t("which")}</p>
+                    </div>
+                    <button onClick={onCancel} className="btn btn-sm btn-ghost btn-circle" aria-label={tc("close")}>
+                        <FiX size={16} />
+                    </button>
+                </div>
+
+                <div className="px-5">
+                    <input
+                        autoFocus
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        placeholder={t("hospitalSearch")}
+                        aria-label={t("hospitalSearch")}
+                        className="input input-bordered input-sm w-full"
+                    />
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1">
+                    {matches.length === 0 && <p className="text-sm text-base-content/50 py-4 text-center">{t("noMatch")}</p>}
+                    {matches.map((h) => (
+                        <button
+                            key={h._id}
+                            type="button"
+                            onClick={() => setPicked(h._id)}
+                            aria-pressed={picked === h._id}
+                            className={`w-full text-left rounded-xl px-3 py-2 border transition-colors ${picked === h._id
+                                ? "border-primary bg-primary/10"
+                                : "border-transparent hover:bg-base-200"
+                                }`}
+                        >
+                            <span className="block text-sm font-semibold">{h.name}</span>
+                            {h.city && <span className="block text-xs text-base-content/50">{h.city}</span>}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex gap-2 p-5 pt-3 border-t border-base-300">
+                    <button onClick={onCancel} className="btn btn-ghost flex-1 rounded-xl">{tc("cancel")}</button>
+                    <button
+                        onClick={() => onPick(picked)}
+                        disabled={!picked}
+                        className="btn btn-primary flex-1 rounded-xl font-bold"
+                    >
+                        {t("assign")}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const AdminUsersPage = () => {
     const ta = useTranslations("admin");
@@ -28,7 +108,8 @@ const AdminUsersPage = () => {
     const [confirmId, setConfirmId] = useState(null);
     const [page, setPage] = useState(1);
     const [hospitals, setHospitals] = useState([]);
-    const [managerFor, setManagerFor] = useState(null); // user being assigned
+    const [managerFor, setManagerFor] = useState(null); // user object being assigned
+    const [query, setQuery] = useState("");
 
     useEffect(() => {
         fetchHospitalOptions().then(setHospitals);
@@ -89,8 +170,14 @@ const AdminUsersPage = () => {
         load(filter);
     };
 
-    const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
-    const paginated = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    // 70+ accounts across 9 pages: without a search, finding the one person to
+    // promote means paging through every doctor first.
+    const needle = query.trim().toLowerCase();
+    const visible = needle
+        ? users.filter((u) => `${u.name || ""} ${u.email || ""}`.toLowerCase().includes(needle))
+        : users;
+    const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+    const paginated = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
     return (
         <div className="p-6 lg:p-8 max-w-5xl mx-auto">
@@ -98,17 +185,26 @@ const AdminUsersPage = () => {
                 {t("title1")} <span className="text-primary">{t("title2")}</span>
             </h1>
 
-            <div role="tablist" className="tabs tabs-boxed w-fit mb-6">
-                {ROLE_FILTERS.map((r) => (
-                    <button
-                        key={r}
-                        role="tab"
-                        onClick={() => setFilter(r)}
-                        className={`tab capitalize ${filter === r ? "tab-active" : ""}`}
-                    >
-                        {roleName(r)}
-                    </button>
-                ))}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div role="tablist" className="tabs tabs-boxed w-fit">
+                    {ROLE_FILTERS.map((r) => (
+                        <button
+                            key={r}
+                            role="tab"
+                            onClick={() => setFilter(r)}
+                            className={`tab capitalize ${filter === r ? "tab-active" : ""}`}
+                        >
+                            {roleName(r)}
+                        </button>
+                    ))}
+                </div>
+                <input
+                    value={query}
+                    onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                    placeholder={t("search")}
+                    aria-label={t("search")}
+                    className="input input-bordered input-sm w-full sm:w-64"
+                />
             </div>
 
             {loading ? (
@@ -124,7 +220,7 @@ const AdminUsersPage = () => {
                         {ta("relogin")}
                     </button>
                 </div>
-            ) : users.length === 0 ? (
+            ) : visible.length === 0 ? (
                 <div className="text-center py-16 text-base-content/50">{t("none")}</div>
             ) : (
                 <>
@@ -160,28 +256,14 @@ const AdminUsersPage = () => {
                                         </td>
                                         <td className="whitespace-nowrap">
                                             {["patient", "hospital_admin"].includes(u.role || "patient") && (
-                                                managerFor === u._id ? (
-                                                    <select
-                                                        autoFocus
-                                                        defaultValue=""
-                                                        onChange={(e) => assignManager(u, e.target.value)}
-                                                        onBlur={() => setManagerFor(null)}
-                                                        className="select select-bordered select-xs mr-1 max-w-48"
-                                                        aria-label={t("pickHospital")}
-                                                    >
-                                                        <option value="" disabled>{t("which")}</option>
-                                                        {hospitals.map((h) => <option key={h._id} value={h._id}>{h.name}</option>)}
-                                                    </select>
-                                                ) : (
-                                                    <span className="inline-flex gap-1 mr-1">
-                                                        <button onClick={() => setManagerFor(u._id)} className="btn btn-xs btn-ghost border-base-300">
-                                                            {u.role === "hospital_admin" ? t("change") : t("make")}
-                                                        </button>
-                                                        {u.role === "hospital_admin" && (
-                                                            <button onClick={() => assignManager(u, "")} className="btn btn-xs btn-ghost">{t("revoke")}</button>
-                                                        )}
-                                                    </span>
-                                                )
+                                                <span className="inline-flex gap-1 mr-1">
+                                                    <button onClick={() => setManagerFor(u)} className="btn btn-xs btn-ghost border-base-300">
+                                                        {u.role === "hospital_admin" ? t("change") : t("make")}
+                                                    </button>
+                                                    {u.role === "hospital_admin" && (
+                                                        <button onClick={() => assignManager(u, "")} className="btn btn-xs btn-ghost">{t("revoke")}</button>
+                                                    )}
+                                                </span>
                                             )}
                                             {u.role !== "admin" && (
                                                 confirmId === u._id ? (
@@ -216,6 +298,15 @@ const AdminUsersPage = () => {
                     </div>
                     <Pagination page={page} totalPages={totalPages} onChange={setPage} />
                 </>
+            )}
+
+            {managerFor && (
+                <HospitalPicker
+                    user={managerFor}
+                    hospitals={hospitals}
+                    onCancel={() => setManagerFor(null)}
+                    onPick={(hospitalId) => assignManager(managerFor, hospitalId)}
+                />
             )}
         </div>
     );

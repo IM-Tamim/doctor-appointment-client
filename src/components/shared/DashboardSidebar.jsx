@@ -41,9 +41,11 @@ const NAV_ITEMS = {
         { href: "/dashboard/admin/hospitals", label: "hospitals", icon: FaHospital },
         { href: "/dashboard/admin/payments", label: "payments", icon: FaMoneyBillWave },
         { href: "/dashboard/admin/users", label: "users", icon: FaUsers },
+        { href: "/dashboard/admin/profile", label: "myProfile", icon: FaUserEdit },
     ],
     hospital_admin: [
         { href: "/dashboard/hospital", label: "myHospital", icon: FaHospital },
+        { href: "/dashboard/hospital/profile", label: "myProfile", icon: FaUserEdit },
     ],
 };
 

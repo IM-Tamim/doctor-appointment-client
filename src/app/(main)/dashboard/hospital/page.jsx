@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { FiUserPlus, FiUserMinus, FiExternalLink } from "react-icons/fi";
+import { FiUserPlus, FiUserMinus, FiExternalLink, FiAlertCircle } from "react-icons/fi";
 import { authClient } from "@/lib/auth-client";
 import { useApiData, unwrap } from "@/lib/useApiData";
 import { getManagedHospital, updateManagedHospital, attachDoctor, detachDoctor } from "@/lib/emergency";
@@ -51,7 +51,22 @@ const HospitalManagerPage = () => {
         reload();
     };
 
-    if (error) return <p className="p-8 text-sm text-error">{error}</p>;
+    // Most often this is the 403 a manager gets before an admin has picked
+    // their hospital — a bare red line left them with nothing to do about it.
+    if (error) {
+        return (
+            <div className="p-6 lg:p-8 max-w-xl mx-auto">
+                <div className="bg-base-100 border border-base-300 rounded-2xl p-8 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-warning/10 text-warning flex items-center justify-center mx-auto mb-4">
+                        <FiAlertCircle size={24} />
+                    </div>
+                    <h1 className="text-xl font-black mb-2">{t("noHospitalTitle")}</h1>
+                    <p className="text-sm text-base-content/60">{error}</p>
+                    <Link href="/home" className="btn btn-primary btn-outline btn-sm rounded-xl mt-5">{t("backHome")}</Link>
+                </div>
+            </div>
+        );
+    }
     if (!data) {
         return (
             <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-4">

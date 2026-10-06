@@ -23,8 +23,8 @@ const DASHBOARD_PATH = {
 const PROFILE_PATH = {
     patient: "/dashboard/patient/profile",
     doctor: "/dashboard/doctor/profile",
-    admin: "/dashboard/admin/overview",
-    hospital_admin: "/dashboard/hospital",
+    admin: "/dashboard/admin/profile",
+    hospital_admin: "/dashboard/hospital/profile",
 };
 
 // false on the server AND on the hydration render, true from the next paint on.

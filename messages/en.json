@@ -57,7 +57,12 @@
       "make": "Make manager",
       "revoke": "Revoke",
       "reactivate": "Reactivate",
-      "suspend": "Suspend"
+      "suspend": "Suspend",
+      "search": "Search name or email",
+      "assignTitle": "Make {name} a manager",
+      "assign": "Assign hospital",
+      "hospitalSearch": "Search hospitals",
+      "noMatch": "No hospital matches that search."
     },
     "hospitals": {
       "title1": "Manage",
@@ -104,7 +109,8 @@
       "specialty": "Specialty",
       "completed": "Completed",
       "revenue": "Revenue",
-      "rating": "Rating"
+      "rating": "Rating",
+      "allTime": "All time"
     },
     "charts": {
       "revenueDay": "Net revenue per day",
@@ -220,7 +226,9 @@
     "emailHint": "Approved doctor's account email",
     "emailLabel": "Doctor email",
     "add": "Add doctor",
-    "note": "Only doctors not listed at another hospital can be added."
+    "note": "Only doctors not listed at another hospital can be added.",
+    "noHospitalTitle": "No hospital assigned yet",
+    "backHome": "Back to site"
   },
   "common": {
     "consultation": {
