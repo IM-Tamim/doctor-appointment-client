@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiGoogle } from "react-icons/si";
 import { useInNativeApp } from "@/lib/useInNativeApp";
-import { FiUser, FiMail, FiLock, FiImage, FiArrowRight, FiCheck, FiX, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiUser, FiMail, FiLock, FiArrowRight, FiCheck, FiX, FiEye, FiEyeOff } from "react-icons/fi";
 import { Suspense, useState } from "react";
 import toast from "react-hot-toast";
 import { LogoFull } from "@/components/shared/Logo";
 import OtpVerify from "@/components/shared/OtpVerify";
+import CloudinaryUpload from "@/components/shared/CloudinaryUpload";
 import { useTranslations } from "next-intl";
 
 const passwordRules = [
@@ -40,6 +41,9 @@ const SignUpForm = () => {
     const [passwordTouched, setPasswordTouched] = useState(false);
     const [formError, setFormError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    // Held outside the form: CloudinaryUpload reports the hosted URL, whether
+    // the file was picked from the device or the link was pasted.
+    const [photoUrl, setPhotoUrl] = useState("");
     // Set once the account exists; switches the card to the 6-digit code step.
     const [pendingEmail, setPendingEmail] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -64,7 +68,7 @@ const SignUpForm = () => {
             email: userData.email,
             password: userData.password,
             name: userData.name,
-            image: userData.photo,
+            image: photoUrl || undefined,
         });
         setSubmitting(false);
 
@@ -171,20 +175,12 @@ const SignUpForm = () => {
                             <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
                                 {t("photo")}
                             </label>
-                            <div className="relative">
-                                <FiImage
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-primary"
-                                    size={15}
-                                />
-                                <input
-                                    name="photo"
-                                    type="url"
-                                    placeholder="https://example.com/photo.jpg"
-                                    className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-primary"
-                                    onFocus={onFocus}
-                                    onBlur={onBlur}
-                                />
-                            </div>
+                            <CloudinaryUpload
+                                value={photoUrl}
+                                onChange={setPhotoUrl}
+                                accept="image/*"
+                                label=""
+                            />
                         </div>
 
                         <div className="flex flex-col gap-1.5">
@@ -254,6 +250,7 @@ const SignUpForm = () => {
                                     setPassword("");
                                     setPasswordTouched(false);
                                     setFormError("");
+                                    setPhotoUrl("");
                                 }}
                                 className="btn btn-warning btn-outline px-5 py-3 rounded-xl text-sm font-medium"
                             >
