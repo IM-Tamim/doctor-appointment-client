@@ -1,207 +1,35 @@
 // Full reset + seed for DocAppoint.
 // Run from the project root:  node scripts/seed.mjs
+// Target a scratch database instead with:  DB_NAME=DocAppoint_dev node scripts/seed.mjs
 //
-// WARNING: this wipes ALL existing data (users, doctors, appointments,
-// notifications) before seeding fresh. There is no undo.
+// WARNING: this wipes ALL existing data (users, doctors, hospitals,
+// appointments, payments, notifications…) in the target database before
+// seeding fresh. There is no undo.
 //
 // Creates REAL Better Auth accounts (so passwords are hashed correctly and
 // you can actually log in), then patches role/status/image directly in
 // Mongo, and (for doctors) inserts an approved doctor profile document.
-//
-// NOTE ON IMAGES: doctor photos are Unsplash editorial portraits of real
-// medical professionals (white coats / scrubs / stethoscopes, faces visible),
-// hand-picked so each headshot actually reads as a doctor. Patients still use
-// randomuser.me portraits, which is fine — they're meant to be ordinary people.
-// Unsplash images are free to use under the Unsplash License.
+// What the data is (real hospitals, fictional doctors, image sources) is
+// documented in seed-data.mjs.
 
 import dotenv from "dotenv";
 dotenv.config();
 
 const { auth } = await import("../src/lib/auth.js");
 const { MongoClient } = await import("mongodb");
+const { HOSPITALS, HOSPITAL_PHOTOS, DOCTORS, SCHEDULES, bioFor } = await import("./seed-data.mjs");
+const { buildHistory, buildDonors, AMBULANCE_PLAN, clinicToday, addDays } = await import("./seed-history.mjs");
+const { ObjectId } = await import("mongodb");
 
-const DB_NAME = "DocAppoint";
+const DB_NAME = process.env.DB_NAME || "DocAppoint";
 
-// ── Data to seed ────────────────────────────────────────────────────────
+// ── Accounts ────────────────────────────────────────────────────────────
 
 const ADMIN = {
   name: "Admin",
   email: "admin@gmail.com",
   password: "admin@123",
 };
-
-const DOCTORS = [
-  {
-    name: "Dr. Farhana Islam",
-    email: "farhana.islam@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000001",
-    specialty: "Cardiology",
-    degree: "MBBS, FCPS (Cardiology)",
-    registrationNumber: "BMDC-A-48213",
-    hospital: "Rajshahi Medical College Hospital",
-    experience: "12 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Cardiologist with 12+ years of experience in interventional cardiology and heart failure management.",
-    fee: 800,
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.8,
-    totalReviews: 3,
-  },
-  {
-    name: "Dr. Kamal Hasan",
-    email: "kamal.hasan@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000002",
-    specialty: "Dermatology",
-    degree: "MBBS, DDV",
-    registrationNumber: "BMDC-A-51902",
-    hospital: "Rajshahi Medical College Hospital",
-    experience: "9 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Dermatologist specializing in skin allergies, acne treatment, and cosmetic dermatology.",
-    fee: 600,
-    image: "https://images.unsplash.com/photo-1612531386530-97286d97c2d2?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.6,
-    totalReviews: 2,
-  },
-  {
-    name: "Dr. Nusrat Jahan",
-    email: "nusrat.jahan@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000003",
-    specialty: "Pediatrics",
-    degree: "MBBS, DCH",
-    registrationNumber: "BMDC-A-60217",
-    hospital: "Rajshahi Shishu Hospital",
-    experience: "15 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Pediatrician with a special interest in newborn care and childhood immunization.",
-    fee: 500,
-    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.9,
-    totalReviews: 5,
-  },
-  {
-    name: "Dr. Ariful Islam",
-    email: "ariful.islam@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000004",
-    specialty: "Orthopedics",
-    degree: "MBBS, MS (Ortho)",
-    registrationNumber: "BMDC-A-39804",
-    hospital: "Rajshahi Medical College Hospital",
-    experience: "11 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Orthopedic surgeon focused on sports injuries, joint replacement, and trauma care.",
-    fee: 900,
-    image: "https://images.unsplash.com/photo-1622902046580-2b47f47f5471?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.5,
-    totalReviews: 4,
-  },
-  {
-    name: "Dr. Shirin Akter",
-    email: "shirin.akter@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000005",
-    specialty: "Gynecology",
-    degree: "MBBS, FCPS (Gynae & Obs)",
-    registrationNumber: "BMDC-A-27651",
-    hospital: "Rajshahi Medical College Hospital",
-    experience: "14 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Gynecologist providing comprehensive women's health, prenatal, and postnatal care.",
-    fee: 700,
-    image: "https://images.unsplash.com/photo-1643297654416-05795d62e39c?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.7,
-    totalReviews: 6,
-  },
-  {
-    name: "Dr. Tanvir Ahmed",
-    email: "tanvir.ahmed@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000006",
-    specialty: "General Medicine",
-    degree: "MBBS",
-    registrationNumber: "BMDC-A-71098",
-    hospital: "Rajshahi General Hospital",
-    experience: "6 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "General physician for everyday illnesses, chronic disease management, and health checkups.",
-    fee: 400,
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.4,
-    totalReviews: 2,
-  },
-  {
-    name: "Dr. Mahbuba Rahman",
-    email: "mahbuba.rahman@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000007",
-    specialty: "Psychiatry",
-    degree: "MBBS, MD (Psychiatry)",
-    registrationNumber: "BMDC-A-83421",
-    hospital: "Rajshahi Medical College Hospital",
-    experience: "10 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Psychiatrist focused on anxiety, depression, and adolescent mental health.",
-    fee: 750,
-    image: "https://images.unsplash.com/photo-1665080954352-5a12ef53017a?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.8,
-    totalReviews: 7,
-  },
-  {
-    name: "Dr. Rezaul Karim",
-    email: "rezaul.karim@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000008",
-    specialty: "ENT",
-    degree: "MBBS, FCPS (ENT)",
-    registrationNumber: "BMDC-A-19345",
-    hospital: "Rajshahi General Hospital",
-    experience: "8 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "ENT specialist treating sinus, hearing, and throat conditions for all ages.",
-    fee: 550,
-    image: "https://images.unsplash.com/photo-1666887360742-974c8fce8e6b?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.3,
-    totalReviews: 3,
-  },
-  {
-    name: "Dr. Taslima Begum",
-    email: "taslima.begum@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000009",
-    specialty: "Dentistry",
-    degree: "BDS, MDS",
-    registrationNumber: "BMDC-A-56230",
-    hospital: "Rajshahi Dental College",
-    experience: "7 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Dental surgeon specializing in root canal treatment and cosmetic dentistry.",
-    fee: 500,
-    image: "https://images.unsplash.com/photo-1651008376811-b90baee60c1f?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.6,
-    totalReviews: 4,
-  },
-  {
-    name: "Dr. Imran Hossain",
-    email: "imran.hossain@docappoint.test",
-    password: "doctor@123",
-    phone: "01711000010",
-    specialty: "Neurology",
-    degree: "MBBS, MD (Neurology)",
-    registrationNumber: "BMDC-A-90876",
-    hospital: "Rajshahi Medical College Hospital",
-    experience: "13 years",
-    location: "Rajshahi, Bangladesh",
-    bio: "Neurologist with expertise in stroke management, epilepsy, and headache disorders.",
-    fee: 950,
-    image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&h=600&q=80&crop=faces",
-    rating: 4.9,
-    totalReviews: 8,
-  },
-];
 
 const PATIENTS = [
   { name: "Tamim Hasan", email: "tamim.patient@docappoint.test", password: "patient@123", phone: "01911000001", image: "https://randomuser.me/api/portraits/men/11.jpg" },
@@ -216,12 +44,20 @@ const PATIENTS = [
   { name: "Jahid Hasan", email: "jahid.hasan@docappoint.test", password: "patient@123", phone: "01911000010", image: "https://randomuser.me/api/portraits/men/52.jpg" },
 ];
 
-// ── Seed logic ──────────────────────────────────────────────────────────
+// A hospital manager (role "hospital_admin") for Square Hospitals.
+const MANAGER = {
+  name: "Square Hospital Manager",
+  email: "manager.square@docappoint.test",
+  password: "manager@123",
+  hospitalKey: "square",
+};
+
+// ── Reviews ─────────────────────────────────────────────────────────────
 
 const SAMPLE_REVIEWS = [
   { userName: "Tamim Hasan", rating: 5, comment: "Very attentive and explained everything clearly." },
   { userName: "Rafiul Karim", rating: 4, comment: "Good experience, a bit of a wait but worth it." },
-  { userName: "Mim Akter", rating: 5, comment: "Best doctor I've visited in Rajshahi. Highly recommended." },
+  { userName: "Mim Akter", rating: 5, comment: "Listened carefully and the treatment worked. Highly recommended." },
   { userName: "Sabbir Rahman", rating: 4, comment: "Professional and courteous. Would book again." },
   { userName: "Nusrat Sultana", rating: 5, comment: "Took time to answer all my questions." },
   { userName: "Arif Chowdhury", rating: 4, comment: "Clean clinic, friendly staff, on-time appointment." },
@@ -229,31 +65,44 @@ const SAMPLE_REVIEWS = [
   { userName: "Mehedi Hasan", rating: 4, comment: "Solved my issue quickly. Reasonable fee too." },
 ];
 
-const reviewsForDoctor = (count) =>
-  SAMPLE_REVIEWS.slice(0, count).map((r) => ({
+// Deterministic "random" so every seed produces the same ratings.
+const pseudo = (i, mod) => (i * 7919 + 104729) % mod;
+
+const reviewsForDoctor = (i) => {
+  const count = 2 + pseudo(i, 7); // 2–8
+  return SAMPLE_REVIEWS.slice(0, count).map((r, k) => ({
     ...r,
     userEmail: `${r.userName.toLowerCase().replace(/\s+/g, ".")}@docappoint.test`,
-    date: new Date(Date.now() - Math.floor(Math.random() * 30) * 86400000).toISOString(),
+    date: new Date(Date.now() - (pseudo(i + k, 60) + 1) * 86400000).toISOString(),
   }));
+};
 
-const DAY_AVAILABILITY = [
-  { day: "Sunday", slots: ["10:00", "10:30", "11:00", "16:00", "16:30"] },
-  { day: "Monday", slots: ["10:00", "10:30", "11:00"] },
-  { day: "Tuesday", slots: ["16:00", "16:30", "17:00"] },
-  { day: "Wednesday", slots: ["10:00", "10:30", "11:00"] },
-  { day: "Thursday", slots: ["16:00", "16:30", "17:00"] },
-  { day: "Friday", slots: [] },
-  { day: "Saturday", slots: ["10:00", "10:30"] },
-];
+const ratingOf = (reviews) =>
+  Number((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1));
+
+// ── Seed logic ──────────────────────────────────────────────────────────
 
 const client = new MongoClient(process.env.MONGO_URI);
 
+// Accounts are created through Better Auth's internal adapter rather than the
+// sign-up endpoint: same password hashing and field defaults, but no sign-up
+// hooks — so seeding doesn't email a verification code to every demo address.
+// Demo accounts are created already verified.
+const authContext = await auth.$context;
+
 const signUpOrGetExisting = async ({ name, email, password }) => {
-  try {
-    await auth.api.signUpEmail({ body: { name, email, password } });
-    console.log(`  created ${email}`);
-  } catch (err) {
+  const existing = await authContext.internalAdapter.findUserByEmail(email);
+  if (existing?.user) {
     console.log(`  already existed, reusing ${email}`);
+  } else {
+    const user = await authContext.internalAdapter.createUser({ name, email, emailVerified: true });
+    await authContext.internalAdapter.linkAccount({
+      userId: user.id,
+      providerId: "credential",
+      accountId: user.id,
+      password: await authContext.password.hash(password),
+    });
+    console.log(`  created ${email}`);
   }
   const db = client.db(DB_NAME);
   const userDoc = await db.collection("user").findOne({ email });
@@ -261,19 +110,22 @@ const signUpOrGetExisting = async ({ name, email, password }) => {
   return userDoc;
 };
 
+const WIPE = [
+  "hospitals", "doctors", "appointments", "notifications", "payments", "prescriptions",
+  "settings", "counters", "queues", "donors", "bloodRequests", "ambulances",
+  "user", "account", "session", "verification", "otpThrottle",
+];
+
 async function run() {
   await client.connect();
   const db = client.db(DB_NAME);
 
-  console.log("Wiping ALL existing data (user, doctors, appointments, notifications)...");
-  await db.collection("doctors").deleteMany({});
-  await db.collection("appointments").deleteMany({});
-  await db.collection("notifications").deleteMany({});
-  await db.collection("user").deleteMany({});
-  // Better Auth also keeps a linked "account" collection (password hashes,
-  // OAuth links) — must be wiped too or old accounts silently survive.
-  await db.collection("account").deleteMany({}).catch(() => {});
-  await db.collection("session").deleteMany({}).catch(() => {});
+  console.log(`Database: ${DB_NAME}`);
+  console.log(`Wiping ALL existing data (${WIPE.join(", ")})...`);
+  for (const name of WIPE) {
+    // Better Auth's account/session collections must go too, or old logins survive.
+    await db.collection(name).deleteMany({}).catch(() => {});
+  }
 
   console.log("\nSeeding admin...");
   const adminUser = await signUpOrGetExisting(ADMIN);
@@ -283,17 +135,43 @@ async function run() {
   );
   console.log(`  ${ADMIN.email} is now admin`);
 
+  console.log("\nSeeding hospitals...");
+  const hospitalByKey = {};
+  for (const [i, h] of HOSPITALS.entries()) {
+    const { key, code, ...fields } = h;
+    const n = String(i + 1).padStart(2, "0");
+    const doc = {
+      ...fields,
+      // Placeholders — see seed-data.mjs.
+      phone: `${code}-0000${n}1`,
+      emergencyPhone: `${code}-0000${n}9`,
+      logo: "",
+      image: "",
+      imageCredit: "",
+      imageSource: "",
+      ...HOSPITAL_PHOTOS[key],
+      createdAt: new Date(),
+    };
+    const { insertedId } = await db.collection("hospitals").insertOne(doc);
+    hospitalByKey[key] = { id: insertedId.toString(), name: h.name, city: h.city };
+    console.log(`  ${h.name} (${h.city})`);
+  }
+
   console.log("\nSeeding doctors...");
-  for (const d of DOCTORS) {
+  const insertedDoctors = [];
+  for (const [i, d] of DOCTORS.entries()) {
     const user = await signUpOrGetExisting({ name: d.name, email: d.email, password: d.password });
     const userId = String(user._id);
+    const hospital = d.hospitalKey ? hospitalByKey[d.hospitalKey] : null;
+    if (d.hospitalKey && !hospital) throw new Error(`Unknown hospital key ${d.hospitalKey} for ${d.name}`);
 
     await db.collection("user").updateOne(
       { _id: user._id },
       { $set: { role: "doctor", status: "active", image: d.image, phone: d.phone } }
     );
 
-    await db.collection("doctors").insertOne({
+    const reviews = reviewsForDoctor(i);
+    const doctorDoc = {
       userId,
       name: d.name,
       email: d.email,
@@ -301,38 +179,105 @@ async function run() {
       specialty: d.specialty,
       degree: d.degree,
       registrationNumber: d.registrationNumber,
-      hospital: d.hospital,
-      experience: d.experience,
-      location: d.location,
+      hospitalId: hospital?.id ?? null,
+      hospital: hospital?.name ?? "",
+      consultationType: d.consultationType,
+      experience: `${d.experience} years`,
+      location: hospital ? `${hospital.city}, Bangladesh` : "Online — anywhere in Bangladesh",
       credentialImageUrl: "",
-      bio: d.bio,
+      bio: bioFor(d, hospital?.name),
       fee: d.fee,
+      followUpFeePercent: d.followUpFeePercent,
       image: d.image,
-      rating: d.rating,
-      totalReviews: d.totalReviews,
-      reviews: reviewsForDoctor(d.totalReviews),
-      availability: DAY_AVAILABILITY,
+      rating: ratingOf(reviews),
+      totalReviews: reviews.length,
+      reviews,
+      availability: SCHEDULES[d.schedule],
+      maxPerHour: d.maxPerHour,
+      leaveDates: [],
       approvalStatus: "approved",
       rejectionReason: "",
       createdAt: new Date(),
-    });
-    console.log(`  doctor profile created for ${d.name}`);
+    };
+    const { insertedId } = await db.collection("doctors").insertOne(doctorDoc);
+    insertedDoctors.push({ ...doctorDoc, _id: insertedId });
   }
+  console.log(`  ${DOCTORS.length} doctor profiles created`);
 
   console.log("\nSeeding patients...");
+  const patientDocs = [];
   for (const p of PATIENTS) {
     const user = await signUpOrGetExisting(p);
     await db.collection("user").updateOne(
       { _id: user._id },
       { $set: { image: p.image, phone: p.phone } }
     );
+    patientDocs.push({ ...p, _id: user._id, gender: p.image.includes("/women/") ? "Female" : "Male" });
   }
+
+  console.log("\nSeeding hospital manager...");
+  const managerUser = await signUpOrGetExisting(MANAGER);
+  await db.collection("user").updateOne(
+    { _id: managerUser._id },
+    { $set: { role: "hospital_admin", status: "active", hospitalId: hospitalByKey[MANAGER.hospitalKey].id } }
+  );
+  console.log(`  ${MANAGER.email} manages ${hospitalByKey[MANAGER.hospitalKey].name}`);
+
+  console.log("\nSeeding appointment history (past 60 days, today, next week)...");
+  const { appointments, payments, receiptCount, year } = buildHistory({
+    doctors: insertedDoctors,
+    patients: patientDocs,
+    queueDoctorEmail: DOCTORS[0].email,
+  });
+  for (const appt of appointments) appt._id = new ObjectId();
+  if (appointments.length) await db.collection("appointments").insertMany(appointments);
+  const ledger = payments.map(({ appointmentRef, ...entry }) => ({ ...entry, appointmentId: appointmentRef._id.toString() }));
+  if (ledger.length) await db.collection("payments").insertMany(ledger);
+  await db.collection("counters").updateOne({ _id: `receipt-${year}` }, { $set: { seq: receiptCount } }, { upsert: true });
+  console.log(`  ${appointments.length} appointments, ${ledger.length} ledger entries`);
+
+  console.log("\nSeeding blood donors, requests and ambulances...");
+  const donorPeople = [
+    ...patientDocs,
+    ...insertedDoctors.slice(0, 22).map((d) => ({ _id: d.userId, name: d.name, phone: d.phone })),
+  ];
+  await db.collection("donors").insertMany(buildDonors(donorPeople));
+  await db.collection("bloodRequests").insertMany([
+    {
+      userId: String(patientDocs[1]._id), requesterName: patientDocs[1].name, bloodGroup: "O-", area: "Mirpur, Dhaka",
+      hospital: "Dhaka Medical College Hospital", units: 2, contactPhone: patientDocs[1].phone,
+      note: "Surgery scheduled; please call.", neededBy: addDays(clinicToday(), 2), status: "open", notified: 0, createdAt: new Date(),
+    },
+    {
+      userId: String(patientDocs[4]._id), requesterName: patientDocs[4].name, bloodGroup: "B+", area: "Panchlaish, Chattogram",
+      hospital: "Chittagong Medical College Hospital", units: 1, contactPhone: patientDocs[4].phone,
+      note: "Thalassaemia patient.", neededBy: addDays(clinicToday(), 1), status: "open", notified: 0, createdAt: new Date(),
+    },
+  ]);
+  const ambulances = [];
+  for (const [i, h] of HOSPITALS.entries()) {
+    const n = String(i + 1).padStart(2, "0");
+    for (let k = 0; k < 1 + (i % 3); k++) {
+      ambulances.push({
+        hospitalId: hospitalByKey[h.key].id,
+        type: AMBULANCE_PLAN[k],
+        // Placeholder numbers, like the hospitals' (see seed-data.mjs).
+        phone: `${h.code}-0000${n}${5 + k}`,
+        vehicleNo: `DEMO-${n}${k + 1}`,
+        available: (i + k) % 4 !== 0,
+        createdAt: new Date(),
+      });
+    }
+  }
+  await db.collection("ambulances").insertMany(ambulances);
+  console.log(`  ${donorPeople.length} donors, 2 blood requests, ${ambulances.length} ambulances`);
 
   console.log("\nDone.");
   console.log("──────────────────────────────────────────");
   console.log(`Admin login:   ${ADMIN.email} / ${ADMIN.password}`);
-  console.log(`Doctor login:  any doctor email above / doctor@123`);
-  console.log(`Patient login: any patient email above / patient@123`);
+  console.log(`Doctor login:  any doctor email (e.g. ${DOCTORS[0].email}) / doctor@123`);
+  console.log(`Patient login: any patient email (e.g. ${PATIENTS[0].email}) / patient@123`);
+  console.log(`Hospital manager: ${MANAGER.email} / ${MANAGER.password}`);
   console.log("──────────────────────────────────────────");
 
   await client.close();

@@ -6,8 +6,11 @@ import Image from "next/image";
 import { FiUser, FiMail, FiEdit2 } from "react-icons/fi";
 import { FiX } from "react-icons/fi";
 import CloudinaryUpload from "@/components/shared/CloudinaryUpload";
+import { useTranslations } from "next-intl";
 
 const MyProfile = () => {
+    const t = useTranslations("profile");
+    const tc = useTranslations("common");
     const { data: session, isPending } = authClient.useSession();
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -35,10 +38,10 @@ const MyProfile = () => {
                 name: data.name,
                 image: imageUrl || user?.image,
             });
-            toast.success("Profile updated successfully!");
+            toast.success(t("updated"));
             setIsOpen(false);
         } catch {
-            toast.error("Failed to update profile.");
+            toast.error(t("failed"));
         } finally {
             setLoading(false);
         }
@@ -76,7 +79,7 @@ const MyProfile = () => {
                             </div>
 
                             <div className="absolute bottom-7 right-3">
-                                <div className="badge badge-success badge-sm">Active</div>
+                                <div className="badge badge-success badge-sm">{t("active")}</div>
                             </div>
                         </div>
 
@@ -84,14 +87,14 @@ const MyProfile = () => {
                             <div className="flex items-center gap-3 bg-base-200 border border-base-300 rounded-xl px-4 py-3">
                                 <FiUser size={15} className="text-primary shrink-0" />
                                 <div>
-                                    <p className="text-xs text-base-content/40">Full Name</p>
+                                    <p className="text-xs text-base-content/40">{t("fullName")}</p>
                                     <p className="text-sm font-semibold text-base-content">{user?.name}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 bg-base-200 border border-base-300 rounded-xl px-4 py-3">
                                 <FiMail size={15} className="text-primary shrink-0" />
                                 <div>
-                                    <p className="text-xs text-base-content/40">Email Address</p>
+                                    <p className="text-xs text-base-content/40">{t("email")}</p>
                                     <p className="text-sm font-semibold text-base-content">{user?.email}</p>
                                 </div>
                             </div>
@@ -101,7 +104,7 @@ const MyProfile = () => {
                             onClick={openModal}
                             className="btn btn-primary btn-outline w-full rounded-xl font-bold mt-5 flex items-center gap-2"
                         >
-                            <FiEdit2 size={14} /> Update Profile
+                            <FiEdit2 size={14} /> {t("update")}
                         </button>
                     </div>
                 </div>
@@ -115,10 +118,10 @@ const MyProfile = () => {
 
                         <div className="flex items-start justify-between p-6 pb-4">
                             <div>
-                                <h3 className="font-black text-xl text-base-content">Update Profile</h3>
-                                <p className="text-sm text-base-content/50 mt-0.5">Edit your account details</p>
+                                <h3 className="font-black text-xl text-base-content">{t("update")}</h3>
+                                <p className="text-sm text-base-content/50 mt-0.5">{t("editDetails")}</p>
                             </div>
-                            <button onClick={() => setIsOpen(false)} className="btn btn-sm btn-ghost btn-circle mt-1">
+                            <button onClick={() => setIsOpen(false)} className="btn btn-sm btn-ghost btn-circle mt-1" aria-label={tc("close")}>
                                 <FiX size={16} />
                             </button>
                         </div>
@@ -127,7 +130,7 @@ const MyProfile = () => {
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-base-content">
-                                    Name <span className="text-primary">*</span>
+                                    {t("name")} <span className="text-primary">*</span>
                                 </label>
                                 <div className="relative">
                                     <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={14} />
@@ -143,7 +146,7 @@ const MyProfile = () => {
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-base-content">
-                                    Profile Picture
+                                    {t("picture")}
                                 </label>
                                 <CloudinaryUpload
                                     value={imageUrl}
@@ -159,7 +162,7 @@ const MyProfile = () => {
                                     onClick={() => setIsOpen(false)}
                                     className="btn btn-warning btn-outline flex-1 rounded-xl font-bold"
                                 >
-                                    Cancel
+                                    {tc("cancel")}
                                 </button>
                                 <button
                                     type="submit"
@@ -168,7 +171,7 @@ const MyProfile = () => {
                                 >
                                     {loading
                                         ? <span className="loading loading-spinner loading-xs" />
-                                        : "Save Changes"
+                                        : t("save")
                                     }
                                 </button>
                             </div>

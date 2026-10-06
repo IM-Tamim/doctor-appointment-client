@@ -1,42 +1,36 @@
 import Link from "next/link";
 import { FiArrowRight, FiSearch, FiCalendar, FiCheckCircle, FiShield } from "react-icons/fi";
-import { getAllDoctorsCached } from "@/lib/doctors";
+import { getDoctorStatsCached } from "@/lib/doctors";
+import { getTranslations, getLocale } from "next-intl/server";
+import { localNumber } from "@/lib/schedule";
 
 const steps = [
     {
         icon: FiSearch,
-        title: "Find a Doctor",
-        desc: "Browse specialists by name or specialty from our verified doctor list.",
+        key: "find",
     },
     {
         icon: FiCalendar,
-        title: "Book Appointment",
-        desc: "Pick a convenient time slot and fill in your details in seconds.",
+        key: "book",
     },
     {
         icon: FiCheckCircle,
-        title: "Get Confirmed",
-        desc: "Receive instant confirmation and visit your doctor stress-free.",
+        key: "confirm",
     },
 ];
 
 const HeroBanner = async () => {
-    const doctors = await getAllDoctorsCached();
-
-    const totalDoctors = doctors.length;
-    const totalReviews = doctors.reduce((sum, d) => sum + (d.totalReviews || 0), 0);
-    const specialties = new Set(doctors.map((d) => d.specialty)).size;
-    // getAllDoctors() fails soft to [] when the API is down — without this guard
-    // the average is 0/0 and the stat renders a literal "NaN★".
-    const avgRating = totalDoctors
-        ? (doctors.reduce((sum, d) => sum + (d.rating || 0), 0) / totalDoctors).toFixed(1)
-        : null;
+    const t = await getTranslations("home");
+    const locale = await getLocale();
+    const n = (v) => Number(v || 0).toLocaleString(locale === "bn" ? "bn-BD" : "en-IN");
+    const { totalDoctors, totalReviews, avgRating, specialties: specialtyList } = await getDoctorStatsCached();
+    const specialties = specialtyList.length;
 
     const stats = [
-        { value: `${totalDoctors}+`, label: "Doctors" },
-        { value: `${totalReviews.toLocaleString()}+`, label: "Patient Reviews" },
-        { value: avgRating ? `${avgRating}★` : "—", label: "Avg Rating" },
-        { value: `${specialties}+`, label: "Specialties" },
+        { value: `${n(totalDoctors)}+`, label: t("stats.doctors") },
+        { value: `${n(totalReviews)}+`, label: t("stats.reviews") },
+        { value: avgRating != null ? `${localNumber(avgRating.toFixed(1), locale)}★` : "—", label: t("stats.rating") },
+        { value: `${n(specialties)}+`, label: t("stats.specialties") },
     ];
 
     return (
@@ -77,14 +71,14 @@ const HeroBanner = async () => {
                                 <span className="absolute inline-flex w-full h-full rounded-full bg-primary animate-pulse-ring" />
                                 <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-primary" />
                             </span>
-                            Trusted Healthcare Platform
+                            {t("badge")}
                         </span>
 
                         <h1 className="animate-fade-up delay-1 text-4xl md:text-5xl lg:text-6xl font-black text-base-content leading-[1.08]">
-                            Your Health, <br className="hidden sm:block" />
-                            Our{" "}
+                            {t("headline1")} <br className="hidden sm:block" />
+                            {t("headline2")}{" "}
                             <span className="relative inline-block text-gradient">
-                                Priority
+                                {t("headline3")}
                                 <svg
                                     className="absolute -bottom-2 left-0 w-full"
                                     viewBox="0 0 200 8"
@@ -104,8 +98,7 @@ const HeroBanner = async () => {
                         </h1>
 
                         <p className="animate-fade-up delay-2 mt-7 text-base md:text-lg text-base-content/60 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                            Connect with top-rated doctors across all specialties. Skip the waiting
-                            room — schedule your visit in seconds and get the care you deserve.
+                            {t("intro")}
                         </p>
 
                         <div className="animate-fade-up delay-3 mt-8 flex flex-wrap gap-3 justify-center lg:justify-start">
@@ -113,13 +106,13 @@ const HeroBanner = async () => {
                                 href="/all-appointments"
                                 className="btn btn-primary rounded-xl font-bold gap-2 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all duration-300"
                             >
-                                Book Appointment <FiArrowRight size={16} />
+                                {t("cta")} <FiArrowRight size={16} />
                             </Link>
                         </div>
 
                         <p className="animate-fade-up delay-4 mt-6 flex items-center gap-2 justify-center lg:justify-start text-xs text-base-content/45">
                             <FiShield size={13} className="text-primary shrink-0" />
-                            Every doctor is admin-verified before they can accept bookings.
+                            {t("verified")}
                         </p>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-10">
@@ -141,7 +134,7 @@ const HeroBanner = async () => {
                         <div className="bg-base-100/80 backdrop-blur-sm border border-base-300 rounded-3xl p-6 md:p-7 shadow-xl shadow-base-content/5">
 
                             <p className="text-xs font-semibold uppercase tracking-widest text-base-content/40 mb-6">
-                                How It Works
+                                {t("howItWorks")}
                             </p>
 
                             <div className="flex flex-col">
@@ -149,7 +142,7 @@ const HeroBanner = async () => {
                                     const Icon = step.icon;
                                     const isLast = i === steps.length - 1;
                                     return (
-                                        <div key={step.title} className="flex gap-4 group">
+                                        <div key={step.key} className="flex gap-4 group">
                                             <div className="flex flex-col items-center">
                                                 <div className="w-11 h-11 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:ring-primary transition-colors duration-300">
                                                     <Icon
@@ -166,11 +159,11 @@ const HeroBanner = async () => {
                                                         0{i + 1}
                                                     </span>
                                                     <p className="font-bold text-sm text-base-content">
-                                                        {step.title}
+                                                        {t(`steps.${step.key}.title`)}
                                                     </p>
                                                 </div>
                                                 <p className="text-xs text-base-content/50 leading-relaxed">
-                                                    {step.desc}
+                                                    {t(`steps.${step.key}.desc`)}
                                                 </p>
                                             </div>
                                         </div>

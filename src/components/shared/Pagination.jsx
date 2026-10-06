@@ -1,7 +1,11 @@
 "use client";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { useTranslations } from "next-intl";
+import { useFormat } from "@/lib/i18n";
 
 const Pagination = ({ page, totalPages, onChange }) => {
+    const t = useTranslations("search");
+    const { number } = useFormat();
     if (totalPages <= 1) return null;
 
     const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(
@@ -13,6 +17,7 @@ const Pagination = ({ page, totalPages, onChange }) => {
             <button
                 onClick={() => onChange(Math.max(1, page - 1))}
                 disabled={page === 1}
+                aria-label={t("prev")}
                 className="btn btn-sm btn-ghost btn-circle disabled:opacity-30"
             >
                 <FiChevronLeft size={16} />
@@ -27,7 +32,7 @@ const Pagination = ({ page, totalPages, onChange }) => {
                         onClick={() => onChange(p)}
                         className={`btn btn-sm btn-circle ${p === page ? "btn-primary" : "btn-ghost"}`}
                     >
-                        {p}
+                        {number(p)}
                     </button>
                 </span>
             ))}
@@ -35,6 +40,7 @@ const Pagination = ({ page, totalPages, onChange }) => {
             <button
                 onClick={() => onChange(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
+                aria-label={t("next")}
                 className="btn btn-sm btn-ghost btn-circle disabled:opacity-30"
             >
                 <FiChevronRight size={16} />

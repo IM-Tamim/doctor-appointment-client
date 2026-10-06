@@ -8,7 +8,7 @@
  * the cache. See shouldBypass() below.
  */
 
-const VERSION = "docappoint-v1";
+const VERSION = "docappoint-v4"; // bumped whenever the app icons change
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline";

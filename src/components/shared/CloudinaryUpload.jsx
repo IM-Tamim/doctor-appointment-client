@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { FiUpload, FiCheck, FiX } from "react-icons/fi";
+import { useTranslations } from "next-intl";
 
 /**
  * Uploads a file directly to Cloudinary using an unsigned upload preset
@@ -12,7 +13,8 @@ import { FiUpload, FiCheck, FiX } from "react-icons/fi";
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-const CloudinaryUpload = ({ value, onChange, label = "Upload file", accept = "image/*,.pdf" }) => {
+const CloudinaryUpload = ({ value, onChange, label, accept = "image/*,.pdf" }) => {
+    const t = useTranslations("upload");
     const inputRef = useRef(null);
     const [uploading, setUploading] = useState(false);
 
@@ -20,7 +22,7 @@ const CloudinaryUpload = ({ value, onChange, label = "Upload file", accept = "im
         if (!file) return;
 
         if (!CLOUD_NAME || !UPLOAD_PRESET) {
-            toast.error("File upload isn't configured yet — paste a link instead, or ask the admin to set up Cloudinary.");
+            toast.error(t("notConfigured"));
             return;
         }
 
@@ -38,12 +40,12 @@ const CloudinaryUpload = ({ value, onChange, label = "Upload file", accept = "im
 
             if (data.secure_url) {
                 onChange(data.secure_url);
-                toast.success("File uploaded.");
+                toast.success(t("done"));
             } else {
-                toast.error(data.error?.message || "Upload failed.");
+                toast.error(data.error?.message || t("failed"));
             }
         } catch {
-            toast.error("Upload failed. Check your connection and try again.");
+            toast.error(t("network"));
         } finally {
             setUploading(false);
         }
@@ -51,7 +53,7 @@ const CloudinaryUpload = ({ value, onChange, label = "Upload file", accept = "im
 
     return (
         <div>
-            <label className="label font-medium">{label}</label>
+            {label !== "" && <label className="label font-medium">{label ?? t("label")}</label>}
 
             {value ? (
                 <div className="flex items-center gap-2 mb-2">
@@ -61,12 +63,13 @@ const CloudinaryUpload = ({ value, onChange, label = "Upload file", accept = "im
                         rel="noreferrer"
                         className="link link-primary text-sm flex items-center gap-1 truncate"
                     >
-                        <FiCheck size={14} /> View uploaded file
+                        <FiCheck size={14} /> {t("view")}
                     </a>
                     <button
                         type="button"
                         onClick={() => onChange("")}
                         className="btn btn-xs btn-ghost btn-circle"
+                        aria-label={t("remove")}
                     >
                         <FiX size={12} />
                     </button>
@@ -92,12 +95,12 @@ const CloudinaryUpload = ({ value, onChange, label = "Upload file", accept = "im
                     ) : (
                         <FiUpload size={14} />
                     )}
-                    {value ? "Replace file" : "Choose file"}
+                    {value ? t("replace") : t("choose")}
                 </button>
                 <input
                     value={value || ""}
                     onChange={(e) => onChange(e.target.value)}
-                    placeholder="or paste a link directly"
+                    placeholder={t("paste")}
                     className="input input-bordered input-sm flex-1"
                 />
             </div>

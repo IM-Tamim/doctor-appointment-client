@@ -7,21 +7,21 @@ import { useInNativeApp } from "@/lib/useInNativeApp";
 import { FiUser, FiMail, FiLock, FiImage, FiArrowRight, FiCheck, FiX, FiEye, FiEyeOff } from "react-icons/fi";
 import { Suspense, useState } from "react";
 import toast from "react-hot-toast";
+import { LogoFull } from "@/components/shared/Logo";
+import OtpVerify from "@/components/shared/OtpVerify";
+import { useTranslations } from "next-intl";
 
 const passwordRules = [
     {
         id: "uppercase",
-        label: "At least 1 uppercase letter",
         test: (v) => /[A-Z]/.test(v),
     },
     {
         id: "lowercase",
-        label: "At least 1 lowercase letter",
         test: (v) => /[a-z]/.test(v),
     },
     {
         id: "minLength",
-        label: "Minimum 6 characters",
         test: (v) => v.length >= 6,
     },
 ];
@@ -35,10 +35,14 @@ const RuleItem = ({ passed, label }) => (
 
 const SignUpForm = () => {
     const router = useRouter();
+    const t = useTranslations("auth");
     const [password, setPassword] = useState("");
     const [passwordTouched, setPasswordTouched] = useState(false);
     const [formError, setFormError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    // Set once the account exists; switches the card to the 6-digit code step.
+    const [pendingEmail, setPendingEmail] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
     const allRulesPassed = passwordRules.every((r) => r.test(password));
 
@@ -51,25 +55,27 @@ const SignUpForm = () => {
 
         if (!allRulesPassed) {
             setPasswordTouched(true);
-            setFormError("Please fix the password issues before registering.");
+            setFormError(t("signup.fixPassword"));
             return;
         }
 
-        const { data, error } = await authClient.signUp.email({
+        setSubmitting(true);
+        const { error } = await authClient.signUp.email({
             email: userData.email,
             password: userData.password,
             name: userData.name,
             image: userData.photo,
-            callbackURL: "/signin",
         });
+        setSubmitting(false);
 
         if (error) {
             setFormError(error.message);
             toast.error(error.message);
         } else {
-            await authClient.signOut();
-            toast.success("Registration Successful!");
-            router.push("/signin");
+            // No session yet: the account stays locked until the emailed code
+            // is entered. Verifying signs the user in.
+            toast.success(t("signup.created"));
+            setPendingEmail(userData.email.trim().toLowerCase());
         }
     };
 
@@ -95,10 +101,9 @@ const SignUpForm = () => {
             <div className="w-full max-w-md animate-fade-up">
 
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-black tracking-tight text-base-content">
-                        Doc<span className="text-gradient">Appoint</span>
-                    </h1>
-                    <p className="text-sm mt-1 text-base-content/60">Create your account</p>
+                    <LogoFull size={112} priority className="mx-auto shadow-lg" />
+                    <h1 className="sr-only">DocAppoint</h1>
+                    <p className="text-sm mt-3 text-base-content/60">{t("signup.subtitle")}</p>
                 </div>
 
                 <div className="rounded-2xl p-8 border border-base-300 bg-base-100/90 backdrop-blur-sm shadow-xl shadow-base-content/5">
@@ -110,11 +115,18 @@ const SignUpForm = () => {
                         </div>
                     )}
 
+                    {pendingEmail ? (
+                        <OtpVerify
+                            email={pendingEmail}
+                            onVerified={() => router.push("/home")}
+                            onBack={() => setPendingEmail("")}
+                        />
+                    ) : (
                     <form onSubmit={onSubmit} className="flex flex-col gap-5">
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                Name
+                                {t("name")}
                             </label>
                             <div className="relative">
                                 <FiUser
@@ -124,7 +136,7 @@ const SignUpForm = () => {
                                 <input
                                     name="name"
                                     type="text"
-                                    placeholder="Your Full Name"
+                                    placeholder={t("namePlaceholder")}
                                     className="w-full pl-11 pr-4 py-3 rounded-xl text-sm outline-none transition-all bg-base-200 text-base-content border border-base-300 focus:border-primary"
                                     onFocus={onFocus}
                                     onBlur={onBlur}
@@ -136,7 +148,7 @@ const SignUpForm = () => {
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                Email
+                                {t("email")}
                             </label>
                             <div className="relative">
                                 <FiMail
@@ -157,7 +169,7 @@ const SignUpForm = () => {
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                Photo URL
+                                {t("photo")}
                             </label>
                             <div className="relative">
                                 <FiImage
@@ -177,7 +189,7 @@ const SignUpForm = () => {
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                Password
+                                {t("password")}
                             </label>
                             <div className="relative">
                                 <FiLock
@@ -206,6 +218,7 @@ const SignUpForm = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-primary transition-colors"
                                 >
                                     {showPassword ? <FiEye size={15} /> : <FiEyeOff size={15} />}
@@ -218,7 +231,7 @@ const SignUpForm = () => {
                                         <RuleItem
                                             key={rule.id}
                                             passed={rule.test(password)}
-                                            label={rule.label}
+                                            label={t(`signup.rules.${rule.id}`)}
                                         />
                                     ))}
                                 </ul>
@@ -228,9 +241,12 @@ const SignUpForm = () => {
                         <div className="flex gap-3 mt-1">
                             <button
                                 type="submit"
+                                disabled={submitting}
                                 className="btn btn-primary btn-outline flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold"
                             >
-                                Register <FiArrowRight size={15} />
+                                {submitting
+                                    ? <span className="loading loading-spinner loading-sm" />
+                                    : <>{t("signup.submit")} <FiArrowRight size={15} /></>}
                             </button>
                             <button
                                 type="reset"
@@ -241,13 +257,13 @@ const SignUpForm = () => {
                                 }}
                                 className="btn btn-warning btn-outline px-5 py-3 rounded-xl text-sm font-medium"
                             >
-                                Reset
+                                {t("reset")}
                             </button>
                         </div>
 
                         <div className="flex items-center gap-3 my-1">
                             <div className="flex-1 h-px bg-base-300" />
-                            <span className="text-xs text-base-content/60">OR</span>
+                            <span className="text-xs text-base-content/60">{t("or")}</span>
                             <div className="flex-1 h-px bg-base-300" />
                         </div>
 
@@ -259,8 +275,7 @@ const SignUpForm = () => {
                             and uses email/password. */}
                         {inNativeApp ? (
                             <p className="text-xs text-center text-base-content/50 bg-base-200/60 border border-base-300 rounded-xl px-3 py-2.5">
-                                Google sign-in isn&apos;t available in the app. Please use your
-                                email and password above, or sign in on the website.
+                                {t("googleApp")}
                             </p>
                         ) : (
                             <button
@@ -269,21 +284,22 @@ const SignUpForm = () => {
                                 className="btn btn-primary btn-soft w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium"
                             >
                                 <SiGoogle size={15} />
-                                Continue with Google
+                                {t("google")}
                             </button>
                         )}
 
                         <p className="text-center text-sm text-base-content/60">
-                            Already have an account?{" "}
+                            {t("signup.haveAccount")}{" "}
                             <Link
                                 href="/signin"
                                 className="font-semibold text-secondary hover:text-info"
                             >
-                                Login
+                                {t("signup.login")}
                             </Link>
                         </p>
 
                     </form>
+                    )}
                 </div>
             </div>
         </div>

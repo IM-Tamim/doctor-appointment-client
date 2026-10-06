@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
 import DoctorCard from "@/components/ui/DoctorCard";
-import { getAllDoctorsCached } from "@/lib/doctors";
+import { getDoctors } from "@/lib/doctors";
+import { getTranslations } from "next-intl/server";
 
 
 const TopRatedDoctors = async () => {
-    const doctors = await getAllDoctorsCached();
-    const topDoctors = [...doctors].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 3);
+    const { doctors: topDoctors } = await getDoctors({ sort: "rating", limit: 3 });
+    const t = await getTranslations("home");
 
     if (topDoctors.length === 0) return null;
 
@@ -16,13 +17,13 @@ const TopRatedDoctors = async () => {
 
                 <div className="text-center mb-10">
                     <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-2">
-                        Our Best
+                        {t("topEyebrow")}
                     </p>
                     <h2 className="text-3xl md:text-4xl font-black text-base-content">
-                        Top Rated <span className="text-primary">Doctors</span>
+                        {t("topTitle1")} <span className="text-primary">{t("topTitle2")}</span>
                     </h2>
                     <p className="text-sm text-base-content/60 mt-2 max-w-md mx-auto">
-                        Handpicked specialists with the highest patient ratings and years of experience.
+                        {t("topText")}
                     </p>
                 </div>
 
@@ -38,7 +39,7 @@ const TopRatedDoctors = async () => {
                         href="/all-appointments"
                         className="btn btn-primary btn-outline rounded-xl font-bold flex items-center gap-2 mx-auto w-fit hover:-translate-y-0.5 transition-transform duration-300"
                     >
-                        View All Doctors <FiArrowRight size={16} />
+                        {t("viewAll")} <FiArrowRight size={16} />
                     </Link>
                 </div>
 

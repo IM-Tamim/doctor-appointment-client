@@ -1,19 +1,21 @@
 import { authClient } from "@/lib/auth-client";
 import MyBookings from "@/components/pages/dashboard/MyBookings";
 import MyProfile from "@/components/pages/dashboard/MyProfile";
+import { getTranslations } from "next-intl/server";
 
-export const metadata = {
-    title: "Dashboard | DocAppoint",
-    description: "Manage your appointments and profile.",
+export const generateMetadata = async () => {
+    const t = await getTranslations("meta");
+    return { title: t("dashTitle"), description: t("dashDesc") };
 };
 
-const DashboardPage = () => {
+const DashboardPage = async () => {
+    const t = await getTranslations("meta");
     return (
         <div className="min-h-screen bg-base-200">
             <div className="bg-base-200 border-b border-base-300">
                 <div className="container mx-auto px-4 py-8">
                     <h1 className="text-2xl md:text-3xl font-black text-base-content text-center">
-                        My <span className="text-primary">Dashboard</span>
+                        {t("dash1")} <span className="text-primary">{t("dash2")}</span>
                     </h1>
                 </div>
             </div>
@@ -24,7 +26,7 @@ const DashboardPage = () => {
                         name="dashboard_tabs"
                         role="tab"
                         className="tab font-semibold"
-                        aria-label="My Bookings"
+                        aria-label={t("bookings")}
                         defaultChecked
                     />
                     <div role="tabpanel" className="tab-content pt-6">
@@ -36,7 +38,7 @@ const DashboardPage = () => {
                         name="dashboard_tabs"
                         role="tab"
                         className="tab font-semibold"
-                        aria-label="My Profile"
+                        aria-label={t("profile")}
                     />
                     <div role="tabpanel" className="tab-content pt-6">
                         <MyProfile />

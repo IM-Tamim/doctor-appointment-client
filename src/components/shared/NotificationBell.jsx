@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { authClient } from "@/lib/auth-client";
 import { getMyNotifications, markAllNotificationsRead } from "@/lib/notifications";
 import { FaBell, FaCheckDouble } from "react-icons/fa";
+import { useLocale, useTranslations } from "next-intl";
 
 const NotificationBell = () => {
     const { data: session } = authClient.useSession();
@@ -10,6 +11,8 @@ const NotificationBell = () => {
     const [loading, setLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
+    const t = useTranslations("notifications");
+    const locale = useLocale();
 
     const load = useCallback(async () => {
         if (!session) return;
@@ -69,6 +72,7 @@ const NotificationBell = () => {
                 type="button"
                 onClick={handleToggle}
                 className="btn btn-ghost btn-circle relative"
+                aria-label={t("open")}
             >
                 <FaBell className="text-base-content/70" size={16} />
                 {unreadCount > 0 && (
@@ -81,7 +85,7 @@ const NotificationBell = () => {
             {isOpen && (
                 <div className="absolute right-0 mt-3 w-80 max-h-96 overflow-y-auto rounded-box bg-base-100 border border-base-300 shadow-xl z-50">
                     <div className="flex items-center justify-between px-3 py-2 border-b border-base-300 sticky top-0 bg-base-100">
-                        <span className="text-sm font-bold">Notifications</span>
+                        <span className="text-sm font-bold">{t("title")}</span>
                         {unreadCount > 0 && (
                             <button
                                 onClick={handleMarkAllRead}
@@ -93,14 +97,14 @@ const NotificationBell = () => {
                                 ) : (
                                     <FaCheckDouble size={10} />
                                 )}
-                                Mark all read
+                                {t("markAll")}
                             </button>
                         )}
                     </div>
                     <ul className="p-2">
                         {notifications.length === 0 ? (
                             <li className="p-4 text-center text-sm text-base-content/50">
-                                No notifications yet.
+                                {t("empty")}
                             </li>
                         ) : (
                             notifications.map((n) => (
@@ -108,7 +112,7 @@ const NotificationBell = () => {
                                     <div className={`flex flex-col items-start gap-0.5 py-2 px-2 rounded-lg ${!n.read ? "bg-primary/5" : ""}`}>
                                         <span className="text-sm">{n.message}</span>
                                         <span className="text-xs text-base-content/40">
-                                            {new Date(n.createdAt).toLocaleString()}
+                                            {new Date(n.createdAt).toLocaleString(locale === "bn" ? "bn-BD" : "en-GB")}
                                         </span>
                                     </div>
                                 </li>

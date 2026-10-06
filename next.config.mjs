@@ -9,6 +9,15 @@ const nextConfig = {
   // that failure came from middleware importing the driver at all.
   serverExternalPackages: ["mongodb", "nodemailer"],
 
+  // next-intl reads its request config through this alias. Set directly rather
+  // than via next-intl's plugin, which eagerly loads @swc/core (a native
+  // binary) only for message-extraction features this app doesn't use.
+  turbopack: {
+    resolveAlias: {
+      "next-intl/config": "./src/i18n/request.js",
+    },
+  },
+
   images: {
     remotePatterns: [
       {

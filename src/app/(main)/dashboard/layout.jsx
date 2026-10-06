@@ -5,23 +5,28 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FiMenu } from "react-icons/fi";
+import { useTranslations } from "next-intl";
 
 const ROLE_SEGMENT = {
     patient: "patient",
     doctor: "doctor",
     admin: "admin",
+    hospital_admin: "hospital",
 };
 
-const ROLE_LABEL = {
-    patient: "Patient Dashboard",
-    doctor: "Doctor Dashboard",
-    admin: "Admin Dashboard",
+// Where the bare /dashboard URL sends each role.
+const ROLE_HOME = {
+    patient: "/dashboard/patient",
+    doctor: "/dashboard/doctor/appointments",
+    admin: "/dashboard/admin/overview",
+    hospital_admin: "/dashboard/hospital",
 };
 
 const DashboardLayout = ({ children }) => {
     const { data: session, isPending } = authClient.useSession();
     const router = useRouter();
     const pathname = usePathname();
+    const t = useTranslations("sidebar");
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     // Close the mobile drawer whenever the route changes. Adjusting state
@@ -41,9 +46,19 @@ const DashboardLayout = ({ children }) => {
             return;
         }
 
+        // Sessions created before email verification was required. Signing in
+        // again sends this account a code.
+        if (session.user.emailVerified === false) {
+            authClient.signOut().then(() => {
+                toast.error(t("verifyFirst"));
+                router.replace(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
+            });
+            return;
+        }
+
         if (session.user.status === "suspended") {
             authClient.signOut().then(() => {
-                toast.error("Your account has been suspended. Contact support.");
+                toast.error(t("suspended"));
                 router.replace("/signin");
             });
             return;
@@ -52,10 +67,14 @@ const DashboardLayout = ({ children }) => {
         const role = session.user.role;
         const segment = pathname.split("/")[2]; // dashboard/<segment>/...
 
+        if (!segment && ROLE_HOME[role]) {
+            router.replace(ROLE_HOME[role]);
+            return;
+        }
         if (segment && ROLE_SEGMENT[role] && segment !== ROLE_SEGMENT[role]) {
             router.replace(`/dashboard/${ROLE_SEGMENT[role]}`);
         }
-    }, [session, isPending, pathname, router]);
+    }, [session, isPending, pathname, router, t]);
 
     if (isPending) {
         return (
@@ -81,12 +100,12 @@ const DashboardLayout = ({ children }) => {
                 <button
                     onClick={() => setDrawerOpen(true)}
                     className="btn btn-ghost btn-sm btn-circle"
-                    aria-label="Open dashboard menu"
+                    aria-label={t("openMenu")}
                     aria-expanded={drawerOpen}
                 >
                     <FiMenu size={18} />
                 </button>
-                <p className="text-sm font-bold">{ROLE_LABEL[role]}</p>
+                <p className="text-sm font-bold">{t.has(`dashboards.${role}`) ? t(`dashboards.${role}`) : ""}</p>
             </div>
 
             <div className="flex">

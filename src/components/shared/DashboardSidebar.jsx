@@ -13,37 +13,50 @@ import {
     FaChartBar,
     FaStethoscope,
     FaHome,
+    FaHospital,
+    FaHeart,
+    FaUsers as FaFamily,
+    FaMoneyBillWave,
 } from "react-icons/fa";
 import { FiX, FiLogOut, FiSearch } from "react-icons/fi";
 import { hardSignOut } from "@/lib/hardSignOut";
+import { useTranslations } from "next-intl";
 
 const NAV_ITEMS = {
     patient: [
-        { href: "/dashboard/patient", label: "My Bookings", icon: FaCalendarCheck },
-        { href: "/dashboard/patient/profile", label: "My Profile", icon: FaUserEdit },
-        { href: "/dashboard/patient/become-doctor", label: "Become a Doctor", icon: FaStethoscope },
+        { href: "/dashboard/patient", label: "myBookings", icon: FaCalendarCheck },
+        { href: "/dashboard/patient/saved", label: "savedDoctors", icon: FaHeart },
+        { href: "/dashboard/patient/family", label: "family", icon: FaFamily },
+        { href: "/dashboard/patient/profile", label: "myProfile", icon: FaUserEdit },
+        { href: "/dashboard/patient/become-doctor", label: "becomeDoctor", icon: FaStethoscope },
     ],
     doctor: [
-        { href: "/dashboard/doctor/appointments", label: "Appointments", icon: FaCalendarCheck },
-        { href: "/dashboard/doctor/availability", label: "Availability", icon: FaClock },
-        { href: "/dashboard/doctor/profile", label: "My Profile", icon: FaUserEdit },
+        { href: "/dashboard/doctor/appointments", label: "appointments", icon: FaCalendarCheck },
+        { href: "/dashboard/doctor/availability", label: "schedule", icon: FaClock },
+        { href: "/dashboard/doctor/profile", label: "myProfile", icon: FaUserEdit },
     ],
     admin: [
-        { href: "/dashboard/admin/overview", label: "Overview", icon: FaChartBar },
-        { href: "/dashboard/admin/doctors", label: "Doctor Approvals", icon: FaUserMd },
-        { href: "/dashboard/admin/users", label: "Manage Users", icon: FaUsers },
+        { href: "/dashboard/admin/overview", label: "overview", icon: FaChartBar },
+        { href: "/dashboard/admin/doctors", label: "approvals", icon: FaUserMd },
+        { href: "/dashboard/admin/hospitals", label: "hospitals", icon: FaHospital },
+        { href: "/dashboard/admin/payments", label: "payments", icon: FaMoneyBillWave },
+        { href: "/dashboard/admin/users", label: "users", icon: FaUsers },
+    ],
+    hospital_admin: [
+        { href: "/dashboard/hospital", label: "myHospital", icon: FaHospital },
     ],
 };
 
-const ROLE_LABEL = { patient: "Patient", doctor: "Doctor", admin: "Administrator" };
 
 const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
     const pathname = usePathname();
     const router = useRouter();
     const items = NAV_ITEMS[role] || [];
+    const t = useTranslations("sidebar");
+    const tn = useTranslations("nav");
 
     const handleLogout = async () => {
-        toast.success("Logged out successfully!");
+        toast.success(tn("loggedOut"));
         await hardSignOut("/home");
     };
 
@@ -54,13 +67,13 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
                     <Avatar src={user?.image} name={user?.name} size="lg" />
                     <div className="min-w-0 flex-1">
                         <p className="font-bold truncate">{user?.name || "User"}</p>
-                        <p className="text-xs text-base-content/50">{ROLE_LABEL[role] || role}</p>
+                        <p className="text-xs text-base-content/50">{t.has(`roles.${role}`) ? t(`roles.${role}`) : role}</p>
                     </div>
                     {onClose && (
                         <button
                             onClick={onClose}
                             className="btn btn-ghost btn-xs btn-circle shrink-0"
-                            aria-label="Close menu"
+                            aria-label={t("closeMenu")}
                         >
                             <FiX size={16} />
                         </button>
@@ -70,7 +83,7 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
 
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                 <p className="px-4 text-[10px] font-bold tracking-wider text-base-content/35 uppercase mb-2">
-                    Menu
+                    {t("menu")}
                 </p>
                 {items.map(({ href, label, icon: Icon }) => {
                     const active = pathname === href;
@@ -86,7 +99,7 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
                             }`}
                         >
                             <Icon size={15} className="shrink-0" />
-                            <span className="truncate">{label}</span>
+                            <span className="truncate">{t(label)}</span>
                         </Link>
                     );
                 })}
@@ -99,7 +112,7 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
                 {variant === "mobile" && (
                     <>
                         <p className="px-4 text-[10px] font-bold tracking-wider text-base-content/35 uppercase mb-2">
-                            Site
+                            {t("site")}
                         </p>
                         <Link
                             href="/home"
@@ -107,7 +120,7 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
                             className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-base-content/70 hover:bg-base-200 hover:text-base-content transition-all"
                         >
                             <FaHome size={14} className="shrink-0" />
-                            Home
+                            {tn("home")}
                         </Link>
                         <Link
                             href="/all-appointments"
@@ -115,7 +128,15 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
                             className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-base-content/70 hover:bg-base-200 hover:text-base-content transition-all"
                         >
                             <FiSearch size={14} className="shrink-0" />
-                            All Appointment
+                            {tn("doctors")}
+                        </Link>
+                        <Link
+                            href="/hospitals"
+                            onClick={onClose}
+                            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-base-content/70 hover:bg-base-200 hover:text-base-content transition-all"
+                        >
+                            <FaHospital size={14} className="shrink-0" />
+                            {tn("hospitals")}
                         </Link>
                         <div className="h-px bg-base-300 my-2" />
                     </>
@@ -128,7 +149,7 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
                         className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-base-content/60 hover:bg-base-200 hover:text-base-content transition-all"
                     >
                         <FaHome size={14} className="shrink-0" />
-                        Back to Site
+                        {t("backToSite")}
                     </Link>
                 )}
                 <button
@@ -136,7 +157,7 @@ const SidebarContent = ({ role, user, onClose, variant = "desktop" }) => {
                     className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-primary hover:bg-primary/10 transition-all"
                 >
                     <FiLogOut size={14} className="shrink-0" />
-                    Logout
+                    {tn("logout")}
                 </button>
             </div>
         </>

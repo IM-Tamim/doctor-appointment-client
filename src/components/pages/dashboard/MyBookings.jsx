@@ -1,13 +1,26 @@
 "use client";
-import { useEffect, useState } from "react";
-import { authClient } from "@/lib/auth-client";
-import { getMyAppointments } from "@/lib/doctors";
-import { FiCalendar, FiClock, FiPhone, FiUser, FiTrash2, FiEdit2, FiFileText } from "react-icons/fi";
-import { MdOutlineLocalHospital } from "react-icons/md";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
-import UpdateModal from "./UpdateModal";
-import DeleteModal from "./DeleteModal";
+import {
+    FiCalendar, FiClock, FiPhone, FiUser, FiFileText, FiDownload, FiVideo, FiRepeat,
+    FiCreditCard, FiEdit2, FiXCircle, FiStar, FiMapPin,
+} from "react-icons/fi";
+import { MdOutlineLocalHospital } from "react-icons/md";
+import { authClient } from "@/lib/auth-client";
+import { useApiData, useNow, unwrap } from "@/lib/useApiData";
+import { getMyAppointments, getDoctorById } from "@/lib/doctors";
+import { downloadReceipt, getFollowUp, getRefundPolicy } from "@/lib/appointments";
+import { todayISO, joinWindow, hoursUntil } from "@/lib/schedule";
+import { useTranslations } from "next-intl";
+import { useFormat, useLabel } from "@/lib/i18n";
 import Pagination from "@/components/shared/Pagination";
+import BookingModal from "@/components/pages/all-appointments/BookingModal";
+import UpdateModal from "./UpdateModal";
+import CancelModal from "./CancelModal";
+import PrescriptionModal from "./PrescriptionModal";
+import ReviewModal from "./ReviewModal";
+import LiveQueue from "./LiveQueue";
 
 const PAGE_SIZE = 6;
 
@@ -16,185 +29,257 @@ const STATUS_BADGE = {
     confirmed: "badge-info",
     completed: "badge-success",
     cancelled: "badge-error",
+    no_show: "badge-ghost",
+};
+
+const PAYMENT_BADGE = {
+    paid: "badge-success",
+    unpaid: "badge-warning",
+    pending: "badge-warning",
+    failed: "badge-error",
+    refunded: "badge-info",
+    partially_refunded: "badge-info",
+};
+
+const TABS = ["upcoming", "past", "cancelled"];
+
+const tabOf = (a) => {
+    if (a.status === "cancelled" || a.isActive === false) return "cancelled";
+    if (["completed", "no_show"].includes(a.status) || a.appointmentDate < todayISO()) return "past";
+    return "upcoming";
 };
 
 const MyBookings = () => {
-    const [appointments, setAppointments] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedAppointment, setSelectedAppointment] = useState(null);
-    const [appointmentToDelete, setAppointmentToDelete] = useState(null);
+    const t = useTranslations("bookings");
+    const tc = useTranslations("common");
+    const statusName = useLabel("common.status");
+    const relationName = useLabel("common.relations");
+    const specialtyName = useLabel("common.specialties");
+    const { locale, date: prettyDate, time: to12h, money, number } = useFormat();
+    const [tab, setTab] = useState("upcoming");
     const [page, setPage] = useState(1);
-    const { data: session } = authClient.useSession();
+    const [dialog, setDialog] = useState(null); // { kind, appt }
+    const [followUp, setFollowUp] = useState(null); // { doctor, ctx }
+    const now = useNow();
+    const { data, loading, reload: load } = useApiData(async (token) => {
+        const [list, policy] = await Promise.all([getMyAppointments(token), getRefundPolicy()]);
+        return { appointments: Array.isArray(list) ? list : [], policy: unwrap(policy) };
+    });
+    const appointments = useMemo(() => data?.appointments || [], [data]);
+    const freeReschedules = data?.policy?.freeReschedules ?? 1;
 
-    const email = session?.user?.email;
+    const grouped = useMemo(() => {
+        const g = { upcoming: [], past: [], cancelled: [] };
+        for (const a of appointments) g[tabOf(a)].push(a);
+        g.upcoming.sort((a, b) => `${a.appointmentDate}${a.appointmentTime}`.localeCompare(`${b.appointmentDate}${b.appointmentTime}`));
+        g.past.sort((a, b) => `${b.appointmentDate}${b.appointmentTime}`.localeCompare(`${a.appointmentDate}${a.appointmentTime}`));
+        return g;
+    }, [appointments]);
 
-    useEffect(() => {
-        if (!email) return;
+    const list = grouped[tab];
+    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    const safePage = Math.min(page, totalPages);
 
-        const fetchAppointments = async () => {
-            setLoading(true);
-            try {
-                const { data: tokenData } = await authClient.token();
-                const data = await getMyAppointments(tokenData?.token);
-                setAppointments(Array.isArray(data) ? data : []);
-            } catch {
-                toast.error("Failed to load appointments.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAppointments();
-    }, [email]);
-
-    const handleDeleteSuccess = (id) => {
-        setAppointments((prev) => prev.filter((a) => a._id !== id));
-        setAppointmentToDelete(null);
+    const closeDialog = () => setDialog(null);
+    const afterChange = () => {
+        setDialog(null);
+        load();
     };
 
-    const handleUpdateSuccess = (updated) => {
-        setAppointments((prev) =>
-            prev.map((a) => (a._id === updated._id ? updated : a))
-        );
-        setSelectedAppointment(null);
+    const receipt = async (appt) => {
+        try {
+            const { data: tokenData } = await authClient.token();
+            await downloadReceipt(appt, tokenData?.token, locale);
+        } catch (err) {
+            toast.error(err.message);
+        }
+    };
+
+    const openFollowUp = async (appt) => {
+        const { data: tokenData } = await authClient.token();
+        const [ctx, doctor] = await Promise.all([
+            getFollowUp(appt._id, tokenData?.token),
+            getDoctorById(appt.doctorId, tokenData?.token).catch(() => null),
+        ]);
+        if (!ctx.ok) return toast.error(ctx.message);
+        if (ctx.data.alreadyBooked) return toast(t("alreadyFollowUp"), { icon: "ℹ️" });
+        if (!doctor?._id) return toast.error(t("noSchedule"));
+        setFollowUp({ doctor, ctx: ctx.data });
     };
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-24 gap-3">
-                <span className="loading loading-spinner loading-lg text-primary" />
-                <p className="text-sm text-base-content/50">Loading your appointments...</p>
-            </div>
-        );
-    }
-
-    if (appointments.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                <div className="w-16 h-16 rounded-full bg-base-300 flex items-center justify-center">
-                    <FiCalendar size={24} className="text-base-content/30" />
-                </div>
-                <p className="text-base font-semibold text-base-content/60">No appointments yet</p>
-                <p className="text-sm text-base-content/40">Book your first appointment to get started.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-72 rounded-2xl" />)}
             </div>
         );
     }
 
     return (
         <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {appointments.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((appt) => (
-                    <div
-                        key={appt._id}
-                        className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col gap-3"
+            <div role="tablist" className="flex flex-wrap gap-2 mb-6">
+                {TABS.map((key) => (
+                    <button
+                        key={key}
+                        role="tab"
+                        aria-selected={tab === key}
+                        onClick={() => { setTab(key); setPage(1); }}
+                        className={`text-xs font-semibold px-3.5 py-1.5 rounded-full border transition-all ${
+                            tab === key
+                                ? "bg-primary text-primary-content border-primary"
+                                : "bg-base-100 text-base-content/60 border-base-300 hover:border-primary/50"
+                        }`}
                     >
-                        {/* Doctor */}
-                        <div className="flex items-center gap-2 pb-3 border-b border-base-300">
-                            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                                <MdOutlineLocalHospital size={16} className="text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-bold text-sm text-base-content truncate">{appt.doctorName}</p>
-                                <p className="text-xs text-base-content/40">Doctor</p>
-                            </div>
-                            <span className={`badge badge-sm ${STATUS_BADGE[appt.status] || "badge-ghost"} capitalize shrink-0`}>
-                                {appt.status || "pending"}
-                            </span>
-                        </div>
-
-                        {/* Details */}
-                        <div className="flex flex-col gap-2">
-                            <p className="text-xs text-base-content/60 flex items-center gap-2">
-                                <FiUser size={12} className="text-primary shrink-0" />
-                                {appt.patientName} · {appt.gender}
-                            </p>
-                            <p className="text-xs text-base-content/60 flex items-center gap-2">
-                                <FiPhone size={12} className="text-primary shrink-0" />
-                                {appt.phone}
-                            </p>
-                            <p className="text-xs text-base-content/60 flex items-center gap-2">
-                                <FiCalendar size={12} className="text-primary shrink-0" />
-                                {appt.appointmentDate}
-                            </p>
-                            <p className="text-xs text-base-content/60 flex items-center gap-2">
-                                <FiClock size={12} className="text-primary shrink-0" />
-                                {appt.appointmentTime}
-                            </p>
-                            {appt.reason && (
-                                <p className="text-xs text-base-content/50 italic mt-1">
-                                    &ldquo;{appt.reason}&rdquo;
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Prescription (once doctor has added one) */}
-                        {appt.prescription && (appt.prescription.notes || appt.prescription.fileUrl) && (
-                            <div className="bg-base-200 rounded-xl p-3 text-xs flex flex-col gap-1">
-                                <p className="font-semibold flex items-center gap-1 text-base-content/70">
-                                    <FiFileText size={12} /> Prescription
-                                </p>
-                                {appt.prescription.notes && (
-                                    <p className="text-base-content/60">{appt.prescription.notes}</p>
-                                )}
-                                {appt.prescription.fileUrl && (
-                                    <a
-                                        href={appt.prescription.fileUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="link link-primary"
-                                    >
-                                        View attached file →
-                                    </a>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Actions — locked once the doctor has confirmed/completed/cancelled it */}
-                        {appt.status && appt.status !== "pending" ? (
-                            <p className="text-xs text-base-content/40 mt-auto pt-3 border-t border-base-300 text-center">
-                                This appointment is {appt.status} and can no longer be edited.
-                            </p>
-                        ) : (
-                            <div className="flex gap-2 mt-auto pt-3 border-t border-base-300">
-                                <button
-                                    onClick={() => setSelectedAppointment(appt)}
-                                    className="btn btn-sm btn-primary btn-outline flex-1 rounded-xl flex items-center gap-1"
-                                >
-                                    <FiEdit2 size={13} /> Update
-                                </button>
-                                <button
-                                    onClick={() => setAppointmentToDelete(appt)}
-                                    className="btn btn-sm btn-error btn-outline flex-1 rounded-xl flex items-center gap-1"
-                                >
-                                    <FiTrash2 size={13} /> Delete
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                        {t(`tabs.${key}`)} <span className="opacity-60 ml-1 tabular-nums">{number(grouped[key].length)}</span>
+                    </button>
                 ))}
             </div>
 
-            <Pagination
-                page={page}
-                totalPages={Math.max(1, Math.ceil(appointments.length / PAGE_SIZE))}
-                onChange={setPage}
-            />
+            {list.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+                    <div className="w-16 h-16 rounded-full bg-base-300 flex items-center justify-center">
+                        <FiCalendar size={24} className="text-base-content/30" />
+                    </div>
+                    <p className="text-base font-semibold text-base-content/60">
+                        {t(`empty.${tab}`)}
+                    </p>
+                    {tab === "upcoming" && (
+                        <Link href="/all-appointments" className="btn btn-primary btn-sm mt-1">{t("findDoctor")}</Link>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {list.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((appt) => {
+                        const status = appt.status || "pending";
+                        const active = appt.isActive !== false && ["pending", "confirmed"].includes(status);
+                        const started = hoursUntil(appt) <= 0;
+                        const online = appt.consultationMode === "online";
+                        const awaitingPayment = active && appt.paymentMethod !== "cash" && ["unpaid", "pending"].includes(appt.paymentStatus);
+                        const { opensAt, closesAt } = joinWindow(appt);
+                        const canJoin = online && appt.meetingUrl && active && now >= opensAt && now <= closesAt;
+                        const canReschedule = active && !started && (appt.rescheduleCount || 0) < freeReschedules;
+                        const hasRx = appt.prescriptionId || appt.prescription?.notes || appt.prescription?.fileUrl;
+                        const payClass = PAYMENT_BADGE[appt.paymentStatus];
+                        const payLabel = payClass && tc(`payment.${appt.paymentStatus}`);
 
-            {/* Update Modal */}
-            {selectedAppointment && (
-                <UpdateModal
-                    appointment={selectedAppointment}
-                    onSuccess={handleUpdateSuccess}
-                    onClose={() => setSelectedAppointment(null)}
-                />
+                        return (
+                            <div key={appt._id} className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col gap-3">
+                                <div className="flex items-start gap-3 pb-3 border-b border-base-300">
+                                    <div className="text-center rounded-xl bg-primary/10 px-3 py-1.5 shrink-0">
+                                        <p className="text-[9px] uppercase tracking-widest text-base-content/50">{t("serial")}</p>
+                                        <p className="text-xl font-black text-primary leading-tight">#{appt.serial != null ? number(appt.serial) : "—"}</p>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-sm text-base-content truncate">{appt.doctorName}</p>
+                                        <p className="text-xs text-base-content/50 truncate">
+                                            {specialtyName(appt.doctorSpecialty) || t("doctor")}
+                                            {appt.type === "follow-up" && ` · ${t("followUp")}`}
+                                        </p>
+                                        <div className="flex flex-wrap gap-1 mt-1.5">
+                                            <span className={`badge badge-xs ${STATUS_BADGE[status] || "badge-ghost"} capitalize`}>
+                                                {statusName(status)}
+                                            </span>
+                                            {payLabel && <span className={`badge badge-xs badge-outline ${payClass}`}>{payLabel}</span>}
+                                            {online && <span className="badge badge-xs badge-outline badge-info gap-0.5"><FiVideo size={9} /> {tc("online")}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5 text-xs text-base-content/65">
+                                    <p className="flex items-center gap-2"><FiCalendar size={12} className="text-primary shrink-0" />{prettyDate(appt.appointmentDate)}</p>
+                                    <p className="flex items-center gap-2"><FiClock size={12} className="text-primary shrink-0" />{to12h(appt.appointmentTime)}</p>
+                                    <p className="flex items-center gap-2">
+                                        <FiUser size={12} className="text-primary shrink-0" />
+                                        {appt.patientName}
+                                        {appt.relation && appt.relation !== "self" ? ` (${relationName(appt.relation)})` : ""}
+                                    </p>
+                                    {!online && appt.hospitalName && (
+                                        <p className="flex items-center gap-2"><MdOutlineLocalHospital size={13} className="text-primary shrink-0" />{appt.hospitalName}</p>
+                                    )}
+                                    {appt.phone && <p className="flex items-center gap-2"><FiPhone size={12} className="text-primary shrink-0" />{appt.phone}</p>}
+                                    {appt.amount > 0 && (
+                                        <p className="flex items-center gap-2">
+                                            <FiCreditCard size={12} className="text-primary shrink-0" />{money(appt.amount)}
+                                            {appt.paymentMethod === "cash" && appt.paymentStatus === "unpaid" && ` · ${t("payAtHospital")}`}
+                                            {appt.refundedAmount > 0 && ` · ${t("refunded", { amount: money(appt.refundedAmount) })}`}
+                                        </p>
+                                    )}
+                                    {appt.cancelReason && <p className="italic text-base-content/45">“{appt.cancelReason}”</p>}
+                                </div>
+
+                                {active && appt.appointmentDate === todayISO() && <LiveQueue appointment={appt} />}
+
+                                {awaitingPayment && (
+                                    <Link href={`/payment/${appt._id}`} className="btn btn-warning btn-sm gap-1">
+                                        <FiCreditCard size={13} /> {t("completePayment")}
+                                    </Link>
+                                )}
+                                {canJoin && (
+                                    <a href={appt.meetingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-success btn-sm gap-1">
+                                        <FiVideo size={13} /> {t("join")}
+                                    </a>
+                                )}
+                                {online && appt.meetingUrl && active && !canJoin && now < opensAt && (
+                                    <p className="text-[11px] text-base-content/45 flex items-center gap-1">
+                                        <FiVideo size={11} /> {t("linkOpens")}
+                                    </p>
+                                )}
+
+                                <div className="flex flex-wrap gap-1.5 mt-auto pt-3 border-t border-base-300">
+                                    {appt.receiptNo && (
+                                        <button onClick={() => receipt(appt)} className="btn btn-xs btn-ghost border-base-300 gap-1">
+                                            <FiDownload size={11} /> {t("receipt")}
+                                        </button>
+                                    )}
+                                    {canReschedule && (
+                                        <button onClick={() => setDialog({ kind: "reschedule", appt })} className="btn btn-xs btn-primary btn-outline gap-1">
+                                            <FiEdit2 size={11} /> {t("reschedule")}
+                                        </button>
+                                    )}
+                                    {active && !started && (
+                                        <button onClick={() => setDialog({ kind: "cancel", appt })} className="btn btn-xs btn-error btn-outline gap-1">
+                                            <FiXCircle size={11} /> {t("cancel")}
+                                        </button>
+                                    )}
+                                    {hasRx && (
+                                        <button onClick={() => setDialog({ kind: "rx", appt })} className="btn btn-xs btn-success btn-outline gap-1">
+                                            <FiFileText size={11} /> {t("prescription")}
+                                        </button>
+                                    )}
+                                    {status === "completed" && appt.prescriptionId && (
+                                        <button onClick={() => openFollowUp(appt)} className="btn btn-xs btn-info btn-outline gap-1">
+                                            <FiRepeat size={11} /> {t("bookFollowUp")}
+                                        </button>
+                                    )}
+                                    {status === "completed" && !appt.reviewed && (
+                                        <button onClick={() => setDialog({ kind: "review", appt })} className="btn btn-xs btn-warning btn-outline gap-1">
+                                            <FiStar size={11} /> {t("review")}
+                                        </button>
+                                    )}
+                                    {!online && active && appt.hospitalId && (
+                                        <Link href={`/hospitals/${appt.hospitalId}`} className="btn btn-xs btn-ghost gap-1">
+                                            <FiMapPin size={11} /> {t("hospital")}
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             )}
 
-            {/* Delete Modal */}
-            {appointmentToDelete && (
-                <DeleteModal
-                    appointment={appointmentToDelete}
-                    onSuccess={handleDeleteSuccess}
-                    onClose={() => setAppointmentToDelete(null)}
+            <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
+
+            {dialog?.kind === "reschedule" && <UpdateModal appointment={dialog.appt} onSuccess={afterChange} onClose={closeDialog} />}
+            {dialog?.kind === "cancel" && <CancelModal appointment={dialog.appt} onDone={afterChange} onClose={closeDialog} />}
+            {dialog?.kind === "rx" && <PrescriptionModal appointment={dialog.appt} onClose={closeDialog} />}
+            {dialog?.kind === "review" && <ReviewModal appointment={dialog.appt} onDone={afterChange} onClose={closeDialog} />}
+            {followUp && (
+                <BookingModal
+                    doctor={followUp.doctor}
+                    followUp={followUp.ctx}
+                    open
+                    onClose={() => { setFollowUp(null); load(); }}
                 />
             )}
         </>

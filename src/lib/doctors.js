@@ -6,28 +6,51 @@ const authHeader = (token) => {
   return token ? { authorization: `Bearer ${token}` } : {};
 };
 
-export const getAllDoctors = async () => {
+const EMPTY_PAGE = { doctors: [], total: 0, page: 1, limit: 12, totalPages: 1 };
+
+/**
+ * Server-side search + pagination. Public data, so a 60s revalidate is fine —
+ * nothing here is per-user or time-critical.
+ */
+export const getDoctors = async ({ q, hospital, specialty, page, limit, sort, type } = {}) => {
+  const params = new URLSearchParams();
+  if (type) params.set("type", type);
+  if (q) params.set("q", q);
+  if (hospital) params.set("hospital", hospital);
+  if (specialty) params.set("specialty", specialty);
+  if (page) params.set("page", String(page));
+  if (limit) params.set("limit", String(limit));
+  if (sort) params.set("sort", sort);
+
   try {
-    const res = await fetch(`${API_URL}/doctors`, { cache: "no-store" });
+    const res = await fetch(`${API_URL}/doctors?${params}`, { next: { revalidate: 60 } });
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data?.doctors) ? data : EMPTY_PAGE;
   } catch {
     // Server unreachable/down — fail soft so the page still renders
     // with an empty list instead of a hard 500 crash.
-    return [];
+    return EMPTY_PAGE;
+  }
+};
+
+const EMPTY_STATS = { totalDoctors: 0, totalReviews: 0, avgRating: null, specialties: [], testimonials: [] };
+
+export const getDoctorStats = async () => {
+  try {
+    const res = await fetch(`${API_URL}/doctors/stats`, { next: { revalidate: 60 } });
+    const data = await res.json();
+    return data && Array.isArray(data.specialties) ? data : EMPTY_STATS;
+  } catch {
+    return EMPTY_STATS;
   }
 };
 
 /**
- * Server-component-only variant of getAllDoctors, deduped per render pass.
- *
- * The homepage renders three server components that each need the doctor list
- * (hero stats, top-rated, specialty marquee). Without this they fired three
- * separate HTTP calls to the API for identical data on every request. React's
- * cache() collapses them into one. Do NOT call this from a client component —
- * cache() is server-only.
+ * Deduped per render pass: the homepage hero, specialty marquee and
+ * testimonials all read the same stats. cache() is server-only — do NOT call
+ * this from a client component.
  */
-export const getAllDoctorsCached = cache(getAllDoctors);
+export const getDoctorStatsCached = cache(getDoctorStats);
 
 export const getDoctorById = async (id, token) => {
   const res = await fetch(`${API_URL}/doctors/${id}`, {
@@ -159,13 +182,15 @@ export const addPrescription = async (id, prescriptionData, token) => {
 };
 
 /**
- * `blockedDates` are one-off days off (holidays, leave) that override the
- * weekly pattern. Omit a field to leave it untouched.
+ * Weekly sessions (`[{ day, sessions: [{ start, end }] }]`), patients per hour
+ * and leave days. Adding a leave day over existing bookings cancels and fully
+ * refunds them on the server. Omit a field to leave it untouched.
  */
-export const updateMyAvailability = async ({ availability, blockedDates }, token) => {
+export const updateMyAvailability = async ({ availability, maxPerHour, leaveDates }, token) => {
   const body = {};
   if (availability !== undefined) body.availability = availability;
-  if (blockedDates !== undefined) body.blockedDates = blockedDates;
+  if (maxPerHour !== undefined) body.maxPerHour = maxPerHour;
+  if (leaveDates !== undefined) body.leaveDates = leaveDates;
 
   const res = await fetch(`${API_URL}/doctor/availability`, {
     method: "PATCH",

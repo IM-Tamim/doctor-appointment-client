@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useSyncExternalStore } from "react";
 import { FiSun, FiMoon } from "react-icons/fi";
+import { useTranslations } from "next-intl";
 
 const LIGHT = "docappoint";
 const DARK = "docappoint-dark";
@@ -24,6 +25,7 @@ const subscribe = (onChange) => {
 const getServerSnapshot = () => false;
 
 const ThemeController = () => {
+    const t = useTranslations("nav");
     // Re-assert the stored theme once, after hydration.
     //
     // The inline script in layout.js sets <html data-theme> before first paint,
@@ -67,8 +69,8 @@ const ThemeController = () => {
         <button
             onClick={handleToggle}
             className="btn btn-ghost btn-circle btn-sm text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
-            aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-            title="Toggle theme"
+            aria-label={isDark ? t("lightTheme") : t("darkTheme")}
+            title={t("toggleTheme")}
         >
             {/* Icon follows React state. For one frame after hydration this can
                 show the light icon while the page is already dark — cosmetic

@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FiDownload, FiShare, FiWifiOff, FiZap, FiSmartphone, FiPlusSquare } from "react-icons/fi";
-import Logo from "@/components/shared/Logo";
+import { LogoFull } from "@/components/shared/Logo";
+import { useTranslations } from "next-intl";
 
 const APK_URL = "/docappoint.apk";
 
@@ -38,9 +39,9 @@ const useInNativeApp = () =>
     );
 
 const PERKS = [
-    { icon: FiZap, label: "Opens straight to booking" },
-    { icon: FiWifiOff, label: "Pages you've seen work offline" },
-    { icon: FiSmartphone, label: "Fullscreen, no browser bars" },
+    { icon: FiZap, label: "perk1" },
+    { icon: FiWifiOff, label: "perk2" },
+    { icon: FiSmartphone, label: "perk3" },
 ];
 
 /**
@@ -58,6 +59,7 @@ const InstallAppSection = () => {
     const isIos = useIsIos();
     const alreadyInstalled = useAlreadyInstalled();
     const inNativeApp = useInNativeApp();
+    const t = useTranslations("home.app");
     const [deferred, setDeferred] = useState(null);
     const [installed, setInstalled] = useState(false);
 
@@ -91,19 +93,18 @@ const InstallAppSection = () => {
                 <div className="reveal relative overflow-hidden rounded-3xl border border-base-300 bg-base-200/50 brand-glow p-8 md:p-10">
                     <div className="flex flex-col md:flex-row items-center gap-8 md:gap-10">
 
-                        <Logo size={80} className="shrink-0 drop-shadow-lg" />
+                        <LogoFull size={112} className="shrink-0 shadow-lg" />
 
                         <div className="flex-1 text-center md:text-left">
                             <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-2">
-                                Get the app
+                                {t("eyebrow")}
                             </p>
                             <h2 className="text-2xl md:text-3xl font-black text-base-content">
-                                DocAppoint on your{" "}
-                                <span className="text-gradient">home screen</span>
+                                {t("title1")}{" "}
+                                <span className="text-gradient">{t("title2")}</span>
                             </h2>
                             <p className="text-sm text-base-content/60 mt-2 max-w-md mx-auto md:mx-0 leading-relaxed">
-                                Book appointments in a tap — install it straight from your
-                                browser, or grab the Android app.
+                                {t("text")}
                             </p>
 
                             <ul className="flex flex-wrap justify-center md:justify-start gap-x-5 gap-y-2 mt-5">
@@ -113,7 +114,7 @@ const InstallAppSection = () => {
                                         className="flex items-center gap-1.5 text-xs text-base-content/60"
                                     >
                                         <Icon size={13} className="text-primary shrink-0" />
-                                        {label}
+                                        {t(label)}
                                     </li>
                                 ))}
                             </ul>
@@ -126,7 +127,7 @@ const InstallAppSection = () => {
                                         download="DocAppoint.apk"
                                         className="btn btn-primary rounded-xl font-bold gap-2 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all duration-300"
                                     >
-                                        <FiDownload size={16} /> Download for Android
+                                        <FiDownload size={16} /> {t("android")}
                                     </a>
                                 )}
 
@@ -135,7 +136,7 @@ const InstallAppSection = () => {
                                         onClick={install}
                                         className="btn btn-primary btn-outline rounded-xl font-bold gap-2 hover:-translate-y-0.5 transition-all duration-300"
                                     >
-                                        <FiPlusSquare size={16} /> Install web app
+                                        <FiPlusSquare size={16} /> {t("installWeb")}
                                     </button>
                                 )}
                             </div>
@@ -144,15 +145,14 @@ const InstallAppSection = () => {
                                 <p className="mt-5 inline-flex items-start gap-2 text-sm text-base-content/70 bg-base-100 border border-base-300 rounded-xl px-4 py-3 text-left">
                                     <FiShare size={15} className="text-primary mt-0.5 shrink-0" />
                                     <span>
-                                        On iPhone: tap{" "}
-                                        <span className="font-semibold text-base-content">Share</span>, then{" "}
-                                        <span className="font-semibold text-base-content">Add to Home Screen</span>.
+                                        {t("iosTap")}{" "}
+                                        <span className="font-semibold text-base-content">{t("iosShare")}</span>{t("iosThen")}{" "}
+                                        <span className="font-semibold text-base-content">{t("iosAdd")}</span>.
                                     </span>
                                 </p>
                             ) : (
                                 <p className="mt-4 text-xs text-base-content/45">
-                                    Android will ask you to allow installing from your browser —
-                                    expected for apps outside the Play Store.
+                                    {t("androidNote")}
                                 </p>
                             )}
                         </div>

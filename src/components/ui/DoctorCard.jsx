@@ -3,12 +3,21 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { FiMapPin, FiClock, FiStar, FiUser, FiArrowRight } from "react-icons/fi";
+import { FiMapPin, FiClock, FiStar, FiUser, FiArrowRight, FiVideo } from "react-icons/fi";
 import { MdOutlineLocalHospital } from "react-icons/md";
+import { cld } from "@/lib/cloudinary";
+import { scheduleRows, weekdayName, localNumber, localYears } from "@/lib/schedule";
+import SaveDoctorButton from "@/components/shared/SaveDoctorButton";
+import { useLocale, useTranslations } from "next-intl";
+import { useLabel } from "@/lib/i18n";
 
 const DoctorCard = ({ doctor, priority = false }) => {
     const router = useRouter();
     const { data: session } = authClient.useSession();
+    const t = useTranslations("doctorCard");
+    const tc = useTranslations("common");
+    const specialtyName = useLabel("common.specialties");
+    const locale = useLocale();
     const [imgFailed, setImgFailed] = useState(false);
 
     const handleViewDetails = () => {
@@ -21,17 +30,20 @@ const DoctorCard = ({ doctor, priority = false }) => {
         doctor.name
     )}&background=0e9080&color=fff&size=400&bold=true`;
 
-    const slots = (doctor.availability || [])
-        .flatMap((d) => (d.slots || []).map((s) => `${d.day.slice(0, 3)} ${s}`))
-        .slice(0, 2);
+    // First two consulting days, e.g. "Sun 5:00 PM – 9:00 PM".
+    const slots = scheduleRows(doctor, locale)
+        .filter((r) => r.ranges.length > 0)
+        .slice(0, 2)
+        .map((r) => `${weekdayName(r.day, locale, "short")} ${r.ranges[0]}`);
+    const online = ["online", "both"].includes(doctor.consultationType);
 
     return (
         <div className="reveal card-lift bg-base-100 rounded-2xl border border-base-300 overflow-hidden flex flex-col group">
 
             <div className="relative h-56 overflow-hidden bg-base-200">
                 <Image
-                    src={imgFailed ? fallback : doctor.image}
-                    alt={`Portrait of ${doctor.name}`}
+                    src={imgFailed || !doctor.image ? fallback : cld(doctor.image)}
+                    alt={t("portrait", { name: doctor.name })}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     priority={priority}
@@ -46,13 +58,20 @@ const DoctorCard = ({ doctor, priority = false }) => {
                 />
 
                 <span className="absolute top-3 left-3 bg-primary text-primary-content text-xs font-semibold px-3 py-1 rounded-full z-10 shadow-sm">
-                    {doctor.specialty}
+                    {specialtyName(doctor.specialty)}
                 </span>
 
-                <span className="absolute top-3 right-3 bg-base-100/90 backdrop-blur-sm text-base-content text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 z-10 shadow-sm">
+                <SaveDoctorButton doctorId={doctor._id} className="absolute top-3 right-3 z-10" />
+
+                <span className="absolute bottom-3 left-3 bg-base-100/90 backdrop-blur-sm text-base-content text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 z-10 shadow-sm">
                     <FiStar size={11} className="text-warning fill-warning" />
-                    {doctor.rating ?? "—"}
+                    {doctor.rating != null ? localNumber(doctor.rating, locale) : "—"}
                 </span>
+                {online && (
+                    <span className="absolute bottom-3 right-3 bg-info text-info-content text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 z-10 shadow-sm">
+                        <FiVideo size={11} /> {doctor.consultationType === "online" ? tc("onlineOnly") : tc("videoVisits")}
+                    </span>
+                )}
             </div>
 
             <div className="p-5 flex flex-col flex-1 gap-3">
@@ -63,15 +82,15 @@ const DoctorCard = ({ doctor, priority = false }) => {
                     </h3>
                     <p className="text-xs text-base-content/50 mt-1 flex items-center gap-1">
                         <FiUser size={11} className="shrink-0" />
-                        {doctor.experience ? `${doctor.experience} experience` : "New on DocAppoint"}
+                        {doctor.experience ? t("experience", { value: localYears(doctor.experience, locale) }) : t("newDoctor")}
                         {" · "}
-                        {doctor.totalReviews || 0} reviews
+                        {t("reviews", { count: doctor.totalReviews || 0 })}
                     </p>
                 </div>
 
                 <p className="text-xs text-base-content/60 flex items-start gap-1.5">
                     <MdOutlineLocalHospital size={13} className="mt-0.5 shrink-0 text-primary" />
-                    {doctor.hospital}
+                    {doctor.hospital || tc("independent")}
                 </p>
 
                 {doctor.location && (
@@ -97,14 +116,14 @@ const DoctorCard = ({ doctor, priority = false }) => {
 
                 <div className="flex items-center justify-between pt-3 border-t border-base-300 mt-auto">
                     <span className="text-sm font-bold text-primary">
-                        ৳ {doctor.fee}
-                        <span className="text-xs font-normal text-base-content/40"> /visit</span>
+                        ৳ {localNumber(doctor.fee, locale)}
+                        <span className="text-xs font-normal text-base-content/40"> {tc("perVisit")}</span>
                     </span>
                     <button
                         onClick={handleViewDetails}
                         className="btn btn-sm btn-primary btn-outline rounded-lg text-xs font-semibold gap-1 group/btn"
                     >
-                        View Details
+                        {t("viewDetails")}
                         <FiArrowRight
                             size={12}
                             className="group-hover/btn:translate-x-0.5 transition-transform"

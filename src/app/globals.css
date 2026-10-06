@@ -106,6 +106,19 @@
     letter-spacing: -0.02em;
   }
 
+  /* Bangla: Hind Siliguri first (Geist has no Bengali glyphs), and no negative
+     tracking, which breaks conjuncts. */
+  html[lang="bn"] body {
+    font-family: var(--font-bn), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+  html[lang="bn"] h1, html[lang="bn"] h2, html[lang="bn"] h3, html[lang="bn"] h4 {
+    letter-spacing: 0;
+  }
+  /* Any Bangla text inside an English page (names, assistant replies). */
+  :lang(bn) {
+    font-family: var(--font-bn), var(--font-sans), sans-serif;
+  }
+
   /* Visible focus for keyboard users only — no glow on mouse clicks. */
   :focus-visible {
     outline: 2px solid var(--color-primary);

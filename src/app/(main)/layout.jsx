@@ -1,5 +1,6 @@
 import Footer from "@/components/shared/Footer";
 import Navbar from "@/components/shared/Navbar";
+import AssistantLauncher from "@/components/assistant/AssistantLauncher";
 
 export default function MainLayout({ children }) {
     return (
@@ -8,6 +9,7 @@ export default function MainLayout({ children }) {
             <Navbar />
             {children}
             <Footer />
+            <AssistantLauncher />
         </main>
     );
 }

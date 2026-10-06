@@ -4,10 +4,11 @@ import SpecialtyMarquee from "@/components/pages/homepage/SpecialtyMarquee";
 import PatientTestimonials from "@/components/pages/homepage/PatientTestimonials";
 import TopRatedDoctors from "@/components/pages/homepage/TopRatedDoctors";
 import WhyChooseUs from "@/components/pages/homepage/WhyChooseUs";
+import { getTranslations } from "next-intl/server";
 
-export const metadata = {
-    title: "Home | DocAppoint",
-    description: "Book doctor appointments instantly with DocAppoint.",
+export const generateMetadata = async () => {
+    const t = await getTranslations("meta");
+    return { title: t("homeTitle"), description: t("homeDesc") };
 };
 
 const HomePage = () => {

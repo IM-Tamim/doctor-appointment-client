@@ -2,6 +2,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FiDownload, FiX, FiShare } from "react-icons/fi";
 import Logo from "./Logo";
+import { useTranslations } from "next-intl";
 
 const DISMISS_KEY = "docappoint:install-dismissed";
 
@@ -93,33 +94,33 @@ const InstallPrompt = () => {
         setClosed(true);
     };
 
+    const t = useTranslations("install");
     const show = eligible && !closed && (Boolean(deferred) || isIosSafari);
     if (!show) return null;
 
     return (
-        <div className="fixed inset-x-3 bottom-3 z-40 sm:left-auto sm:right-4 sm:w-96 animate-fade-up safe-bottom">
+        <div className="fixed inset-x-3 bottom-20 z-40 sm:left-auto sm:right-4 sm:w-96 animate-fade-up safe-bottom">
             <div className="bg-base-100 border border-base-300 rounded-2xl shadow-2xl p-4 flex items-start gap-3">
                 <Logo size={40} className="shrink-0" />
 
                 <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-base-content">Install DocAppoint</p>
+                    <p className="font-bold text-sm text-base-content">{t("title")}</p>
 
                     {isIosSafari && !deferred ? (
                         <p className="text-xs text-base-content/60 mt-1 leading-relaxed">
-                            Tap <FiShare size={11} className="inline mx-0.5 text-primary" /> Share,
-                            then{" "}
-                            <span className="font-semibold text-base-content">Add to Home Screen</span>.
+                            {t("iosTap")} <FiShare size={11} className="inline mx-0.5 text-primary" /> {t("iosShare")}{" "}
+                            <span className="font-semibold text-base-content">{t("iosAdd")}</span>.
                         </p>
                     ) : (
                         <>
                             <p className="text-xs text-base-content/60 mt-1 leading-relaxed">
-                                Add it to your home screen for faster booking and a fullscreen app.
+                                {t("text")}
                             </p>
                             <button
                                 onClick={install}
                                 className="btn btn-primary btn-sm rounded-lg mt-3 gap-1.5 font-bold"
                             >
-                                <FiDownload size={13} /> Install
+                                <FiDownload size={13} /> {t("button")}
                             </button>
                         </>
                     )}
@@ -127,7 +128,7 @@ const InstallPrompt = () => {
 
                 <button
                     onClick={dismiss}
-                    aria-label="Dismiss install prompt"
+                    aria-label={t("dismiss")}
                     className="btn btn-ghost btn-xs btn-circle shrink-0"
                 >
                     <FiX size={14} />

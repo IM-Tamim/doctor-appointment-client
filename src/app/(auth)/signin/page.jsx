@@ -7,12 +7,19 @@ import { useInNativeApp } from "@/lib/useInNativeApp";
 import { Suspense, useState } from "react";
 import { FiMail, FiLock, FiArrowRight, FiEye, FiEyeOff } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { LogoFull } from "@/components/shared/Logo";
+import OtpVerify from "@/components/shared/OtpVerify";
+import { useTranslations } from "next-intl";
 
 const SignInForm = () => {
     const router = useRouter();
+    const t = useTranslations("auth");
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl") || "/home";
     const [showPassword, setShowPassword] = useState(false);
+    // Set when the account exists but its email was never verified; the
+    // server has already emailed a fresh code at this point.
+    const [pendingEmail, setPendingEmail] = useState("");
 
     const onSubmit = async (e) => {
         e.preventDefault();
@@ -24,10 +31,13 @@ const SignInForm = () => {
             password: userData.password,
         });
 
-        if (error) {
+        if (error?.code === "EMAIL_NOT_VERIFIED") {
+            toast(t("signin.verifyFirst"), { icon: "✉️" });
+            setPendingEmail(userData.email.trim().toLowerCase());
+        } else if (error) {
             toast.error(error.message);
         } else {
-            toast.success("Login Successful!");
+            toast.success(t("signin.success"));
             router.push(callbackUrl);
         }
     };
@@ -55,19 +65,25 @@ const SignInForm = () => {
             <div className="w-full max-w-md animate-fade-up">
 
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-black tracking-tight text-base-content">
-                        Doc<span className="text-gradient">Appoint</span>
-                    </h1>
-                    <p className="text-sm mt-1 text-base-content/60">Login to your account</p>
+                    <LogoFull size={112} priority className="mx-auto shadow-lg" />
+                    <h1 className="sr-only">DocAppoint</h1>
+                    <p className="text-sm mt-3 text-base-content/60">{t("signin.subtitle")}</p>
                 </div>
 
                 <div className="rounded-2xl p-8 border border-base-300 bg-base-100/90 backdrop-blur-sm shadow-xl shadow-base-content/5">
+                    {pendingEmail ? (
+                        <OtpVerify
+                            email={pendingEmail}
+                            onVerified={() => router.push(callbackUrl)}
+                            onBack={() => setPendingEmail("")}
+                        />
+                    ) : (
                     <form onSubmit={onSubmit} className="flex flex-col gap-5">
 
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                Email
+                                {t("email")}
                             </label>
                             <div className="relative">
                                 <FiMail
@@ -89,13 +105,13 @@ const SignInForm = () => {
                         <div className="flex flex-col gap-1.5">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                    Password
+                                    {t("password")}
                                 </label>
                                 <Link
                                     href="/forgot-password"
                                     className="text-xs text-primary hover:text-primary/70 font-medium transition-colors"
                                 >
-                                    Forgot Password?
+                                    {t("signin.forgot")}
                                 </Link>
                             </div>
                             <div className="relative">
@@ -115,6 +131,7 @@ const SignInForm = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-primary transition-colors"
                                 >
                                     {showPassword ? <FiEye size={15} />:<FiEyeOff size={15} />}
@@ -127,19 +144,19 @@ const SignInForm = () => {
                                 type="submit"
                                 className="btn btn-primary btn-outline flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold"
                             >
-                                Sign In <FiArrowRight size={15} />
+                                {t("signin.submit")} <FiArrowRight size={15} />
                             </button>
                             <button
                                 type="reset"
                                 className="btn btn-warning btn-outline px-5 py-3 rounded-xl text-sm font-medium"
                             >
-                                Reset
+                                {t("reset")}
                             </button>
                         </div>
 
                         <div className="flex items-center gap-3 my-1">
                             <div className="flex-1 h-px bg-base-300" />
-                            <span className="text-xs text-base-content/60">OR</span>
+                            <span className="text-xs text-base-content/60">{t("or")}</span>
                             <div className="flex-1 h-px bg-base-300" />
                         </div>
 
@@ -151,8 +168,7 @@ const SignInForm = () => {
                             and uses email/password. */}
                         {inNativeApp ? (
                             <p className="text-xs text-center text-base-content/50 bg-base-200/60 border border-base-300 rounded-xl px-3 py-2.5">
-                                Google sign-in isn&apos;t available in the app. Please use your
-                                email and password above, or sign in on the website.
+                                {t("googleApp")}
                             </p>
                         ) : (
                             <button
@@ -161,21 +177,22 @@ const SignInForm = () => {
                                 className="btn btn-primary btn-soft w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium"
                             >
                                 <SiGoogle size={15} />
-                                Continue with Google
+                                {t("google")}
                             </button>
                         )}
 
                         <p className="text-center text-sm text-base-content/60">
-                            Don&apos;t have an account?{" "}
+                            {t("signin.noAccount")}{" "}
                             <Link
                                 href="/signup"
                                 className="text-secondary font-semibold hover:text-info"
                             >
-                                Register
+                                {t("signin.register")}
                             </Link>
                         </p>
 
                     </form>
+                    )}
                 </div>
             </div>
         </div>

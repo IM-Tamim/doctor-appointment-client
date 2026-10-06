@@ -5,12 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FiLock, FiEye, FiEyeOff, FiArrowLeft, FiAlertCircle, FiCheckCircle } from "react-icons/fi";
 import { authClient } from "@/lib/auth-client";
 import toast from "react-hot-toast";
+import { LogoFull } from "@/components/shared/Logo";
+import { useTranslations } from "next-intl";
 
 const inputClass =
     "w-full pl-11 pr-11 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all";
 
 const ResetPasswordForm = () => {
     const router = useRouter();
+    const t = useTranslations("auth.resetPw");
+    const tc = useTranslations("auth");
+    const tf = useTranslations("auth.forgot");
+    const back = tf("back");
     const params = useSearchParams();
 
     // Better Auth's callback lands here with ?token=...; ?error=INVALID_TOKEN
@@ -35,14 +41,14 @@ const ResetPasswordForm = () => {
         try {
             const { error } = await authClient.resetPassword({ newPassword: password, token });
             if (error) {
-                toast.error(error.message || "That reset link is no longer valid.");
+                toast.error(error.message || t("invalidLink"));
                 return;
             }
             setDone(true);
-            toast.success("Password updated. You can sign in now.");
+            toast.success(t("updatedToast"));
             setTimeout(() => router.push("/signin"), 1800);
         } catch {
-            toast.error("Could not reach the server. Please try again.");
+            toast.error(tf("network"));
         } finally {
             setLoading(false);
         }
@@ -56,21 +62,20 @@ const ResetPasswordForm = () => {
                 </div>
                 <div>
                     <h2 className="text-lg font-bold text-base-content mb-2">
-                        This link isn&apos;t valid
+                        {t("invalidTitle")}
                     </h2>
                     <p className="text-sm text-base-content/60 leading-relaxed">
-                        Password reset links work once and expire after an hour. Request a
-                        fresh one and we&apos;ll email it straight over.
+                        {t("invalidText")}
                     </p>
                 </div>
                 <Link href="/forgot-password" className="btn btn-primary w-full rounded-xl text-sm font-bold">
-                    Request a new link
+                    {t("requestNew")}
                 </Link>
                 <Link
                     href="/signin"
                     className="text-xs text-base-content/50 hover:text-primary transition-colors flex items-center gap-1.5"
                 >
-                    <FiArrowLeft size={13} /> Back to Login
+                    <FiArrowLeft size={13} /> {back}
                 </Link>
             </div>
         );
@@ -83,11 +88,11 @@ const ResetPasswordForm = () => {
                     <FiCheckCircle className="text-success" size={28} />
                 </div>
                 <div>
-                    <h2 className="text-lg font-bold text-base-content mb-2">Password updated</h2>
-                    <p className="text-sm text-base-content/60">Taking you to the login page…</p>
+                    <h2 className="text-lg font-bold text-base-content mb-2">{t("updated")}</h2>
+                    <p className="text-sm text-base-content/60">{t("redirecting")}</p>
                 </div>
                 <Link href="/signin" className="btn btn-primary w-full rounded-xl text-sm font-bold">
-                    Go to Login
+                    {t("goLogin")}
                 </Link>
             </div>
         );
@@ -100,13 +105,13 @@ const ResetPasswordForm = () => {
                     <FiLock className="text-primary" size={24} />
                 </div>
                 <p className="text-sm text-base-content/60 leading-relaxed">
-                    Choose a new password. Use at least 8 characters.
+                    {t("intro")}
                 </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
                 <label htmlFor="new-password" className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                    New password
+                    {t("new")}
                 </label>
                 <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none" size={15} />
@@ -123,18 +128,18 @@ const ResetPasswordForm = () => {
                     <button
                         type="button"
                         onClick={() => setShow(!show)}
-                        aria-label={show ? "Hide password" : "Show password"}
+                        aria-label={show ? tc("hidePassword") : tc("showPassword")}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-primary transition-colors"
                     >
                         {show ? <FiEye size={15} /> : <FiEyeOff size={15} />}
                     </button>
                 </div>
-                {tooShort && <p className="text-xs text-error">Must be at least 8 characters.</p>}
+                {tooShort && <p className="text-xs text-error">{t("tooShort")}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
                 <label htmlFor="confirm-password" className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                    Confirm password
+                    {t("confirm")}
                 </label>
                 <div className="relative">
                     <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none" size={15} />
@@ -149,7 +154,7 @@ const ResetPasswordForm = () => {
                         required
                     />
                 </div>
-                {mismatch && <p className="text-xs text-error">Passwords don&apos;t match.</p>}
+                {mismatch && <p className="text-xs text-error">{t("mismatch")}</p>}
             </div>
 
             <button
@@ -157,27 +162,28 @@ const ResetPasswordForm = () => {
                 disabled={loading || !canSubmit}
                 className="btn btn-primary w-full rounded-xl text-sm font-bold disabled:opacity-60"
             >
-                {loading ? <span className="loading loading-spinner loading-xs" /> : "Update password"}
+                {loading ? <span className="loading loading-spinner loading-xs" /> : t("submit")}
             </button>
 
             <Link
                 href="/signin"
                 className="text-xs text-center text-base-content/50 hover:text-primary transition-colors flex items-center justify-center gap-1.5"
             >
-                <FiArrowLeft size={13} /> Back to Login
+                <FiArrowLeft size={13} /> {back}
             </Link>
         </form>
     );
 };
 
+const ResetPasswordSubtitle = () => useTranslations("auth.resetPw")("subtitle");
+
 const ResetPasswordPage = () => (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-base-200/50 brand-glow">
         <div className="w-full max-w-md animate-fade-up">
             <div className="text-center mb-8">
-                <h1 className="text-4xl font-black tracking-tight text-base-content">
-                    Doc<span className="text-gradient">Appoint</span>
-                </h1>
-                <p className="text-sm mt-1 text-base-content/60">Set a new password</p>
+                <LogoFull size={112} priority className="mx-auto shadow-lg" />
+                <h1 className="sr-only">DocAppoint</h1>
+                <p className="text-sm mt-3 text-base-content/60"><ResetPasswordSubtitle /></p>
             </div>
 
             <div className="rounded-2xl p-8 border border-base-300 bg-base-100/90 backdrop-blur-sm shadow-xl shadow-base-content/5">

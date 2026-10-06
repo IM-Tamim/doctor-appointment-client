@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import { cld } from "@/lib/cloudinary";
 
 const SIZE_CLASSES = {
     sm: "w-8 h-8 text-xs",
@@ -22,7 +23,7 @@ const Avatar = ({ src, name, size = "md", className = "" }) => {
         >
             {showImage ? (
                 <Image
-                    src={src}
+                    src={cld(src)}
                     alt={name || "User"}
                     fill
                     sizes={`${pixelSize}px`}

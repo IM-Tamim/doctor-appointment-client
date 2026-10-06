@@ -6,8 +6,15 @@ import { hardSignOut } from "@/lib/hardSignOut";
 import { getPendingDoctors, approveDoctor, rejectDoctor } from "@/lib/admin";
 import toast from "react-hot-toast";
 import { FaCheck, FaTimes } from "react-icons/fa";
+import { useTranslations } from "next-intl";
+import { useFormat, useLabel } from "@/lib/i18n";
 
 const AdminDoctorsPage = () => {
+    const ta = useTranslations("admin");
+    const t = useTranslations("admin.approvals");
+    const tc = useTranslations("common");
+    const specialtyName = useLabel("common.specialties");
+    const { locale, money, years } = useFormat();
     const { data: session } = authClient.useSession();
     const router = useRouter();
     const [pending, setPending] = useState([]);
@@ -24,10 +31,7 @@ const AdminDoctorsPage = () => {
         try {
             const { data: tokenData, error: tokenError } = await authClient.token();
             if (tokenError || !tokenData?.token) {
-                setError(
-                    `Couldn't get an auth token from Better Auth: ${tokenError?.message || "no token was returned"}. ` +
-                    `This happens before the role check even runs — check that the JWT plugin is configured correctly and CLIENT_URL/BETTER_AUTH_URL match your running dev server.`
-                );
+                setError(ta("tokenError", { reason: tokenError?.message || ta("noToken") }));
                 setLoading(false);
                 return;
             }
@@ -35,11 +39,11 @@ const AdminDoctorsPage = () => {
             if (Array.isArray(result)) {
                 setPending(result);
             } else {
-                setError(result?.message || "Unexpected response from server.");
+                setError(result?.message || ta("unexpected"));
                 setPending([]);
             }
         } catch {
-            setError("Couldn't reach the server. Is it running?");
+            setError(ta("unreachable"));
         } finally {
             setLoading(false);
         }
@@ -57,10 +61,10 @@ const AdminDoctorsPage = () => {
             const { data: tokenData } = await authClient.token();
             const token = tokenData?.token;
             await approveDoctor(id, token);
-            toast.success("Doctor approved.");
+            toast.success(t("approved"));
             setPending((prev) => prev.filter((d) => d._id !== id));
         } catch {
-            toast.error("Failed to approve.");
+            toast.error(t("approveFailed"));
         } finally {
             setBusyId(null);
         }
@@ -72,12 +76,12 @@ const AdminDoctorsPage = () => {
             const { data: tokenData } = await authClient.token();
             const token = tokenData?.token;
             await rejectDoctor(id, reason, token);
-            toast.success("Application rejected.");
+            toast.success(t("rejected"));
             setPending((prev) => prev.filter((d) => d._id !== id));
             setRejectingId(null);
             setReason("");
         } catch {
-            toast.error("Failed to reject.");
+            toast.error(t("rejectFailed"));
         } finally {
             setBusyId(null);
         }
@@ -86,7 +90,7 @@ const AdminDoctorsPage = () => {
     return (
         <div className="p-6 lg:p-8 max-w-5xl mx-auto">
             <h1 className="text-2xl md:text-3xl font-black mb-8">
-                Doctor <span className="text-primary">Approvals</span>
+                {t("title1")} <span className="text-primary">{t("title2")}</span>
             </h1>
 
             {loading ? (
@@ -96,15 +100,15 @@ const AdminDoctorsPage = () => {
             ) : error ? (
                 <div className="alert alert-primary/10 border border-primary/30 rounded-2xl flex-col items-start gap-3">
                     <p className="text-sm">
-                        <span className="font-bold">Couldn&apos;t load applications:</span> {error}
+                        <span className="font-bold">{t("loadFailed")}</span> {error}
                     </p>
                     <button onClick={handleRepairSession} className="btn btn-sm btn-primary">
-                        Log out & sign in again
+                        {ta("relogin")}
                     </button>
                 </div>
             ) : pending.length === 0 ? (
                 <div className="text-center py-16 text-base-content/50">
-                    No pending applications right now.
+                    {t("none")}
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -114,16 +118,16 @@ const AdminDoctorsPage = () => {
                                 <div>
                                     <h3 className="font-bold text-lg">{d.name}</h3>
                                     <p className="text-sm text-base-content/60">{d.email}</p>
-                                    <p className="text-sm text-base-content/60">{d.phone || "No phone provided"}</p>
+                                    <p className="text-sm text-base-content/60">{d.phone || t("noPhone")}</p>
                                     <div className="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                                        <p><span className="text-base-content/50">Specialty:</span> {d.specialty}</p>
-                                        <p><span className="text-base-content/50">Degree:</span> {d.degree}</p>
-                                        <p><span className="text-base-content/50">Reg. No:</span> {d.registrationNumber}</p>
-                                        <p><span className="text-base-content/50">Hospital:</span> {d.hospital}</p>
-                                        <p><span className="text-base-content/50">Experience:</span> {d.experience || "Not specified"}</p>
-                                        <p><span className="text-base-content/50">Location:</span> {d.location || "Not specified"}</p>
-                                        <p><span className="text-base-content/50">Fee:</span> {d.fee} BDT</p>
-                                        <p><span className="text-base-content/50">Applied:</span> {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "—"}</p>
+                                        <p><span className="text-base-content/50">{t("specialty")}</span> {specialtyName(d.specialty)}</p>
+                                        <p><span className="text-base-content/50">{t("degree")}</span> {d.degree}</p>
+                                        <p><span className="text-base-content/50">{t("regNo")}</span> {d.registrationNumber}</p>
+                                        <p><span className="text-base-content/50">{t("hospital")}</span> {d.hospital || t("independent")}</p>
+                                        <p><span className="text-base-content/50">{t("experience")}</span> {years(d.experience) || t("notSpecified")}</p>
+                                        <p><span className="text-base-content/50">{t("location")}</span> {d.location || t("notSpecified")}</p>
+                                        <p><span className="text-base-content/50">{t("fee")}</span> {money(d.fee)}</p>
+                                        <p><span className="text-base-content/50">{t("applied")}</span> {d.createdAt ? new Date(d.createdAt).toLocaleDateString(locale === "bn" ? "bn-BD" : "en-GB") : "—"}</p>
                                     </div>
                                     {d.bio && <p className="text-sm mt-3 text-base-content/70">{d.bio}</p>}
                                     {d.credentialImageUrl && (
@@ -133,7 +137,7 @@ const AdminDoctorsPage = () => {
                                             rel="noreferrer"
                                             className="link link-primary text-sm mt-2 inline-block"
                                         >
-                                            View credential document →
+                                            {t("credential")}
                                         </a>
                                     )}
                                 </div>
@@ -143,14 +147,14 @@ const AdminDoctorsPage = () => {
                                         disabled={busyId === d._id}
                                         className="btn btn-sm btn-success text-success-content"
                                     >
-                                        <FaCheck size={12} /> Approve
+                                        <FaCheck size={12} /> {t("approve")}
                                     </button>
                                     <button
                                         onClick={() => setRejectingId(d._id)}
                                         disabled={busyId === d._id}
                                         className="btn btn-sm btn-error btn-soft"
                                     >
-                                        <FaTimes size={12} /> Reject
+                                        <FaTimes size={12} /> {t("reject")}
                                     </button>
                                 </div>
                             </div>
@@ -160,7 +164,7 @@ const AdminDoctorsPage = () => {
                                     <input
                                         value={reason}
                                         onChange={(e) => setReason(e.target.value)}
-                                        placeholder="Reason for rejection (optional)"
+                                        placeholder={t("reasonHint")}
                                         className="input input-bordered input-sm flex-1"
                                     />
                                     <button
@@ -168,13 +172,13 @@ const AdminDoctorsPage = () => {
                                         disabled={busyId === d._id}
                                         className="btn btn-sm btn-primary"
                                     >
-                                        Confirm Reject
+                                        {t("confirmReject")}
                                     </button>
                                     <button
                                         onClick={() => { setRejectingId(null); setReason(""); }}
                                         className="btn btn-sm btn-ghost"
                                     >
-                                        Cancel
+                                        {tc("cancel")}
                                     </button>
                                 </div>
                             )}

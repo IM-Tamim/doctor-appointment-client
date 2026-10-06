@@ -10,17 +10,21 @@ import Logo from "./Logo";
 import ThemeController from "./ThemeController";
 import NotificationBell from "./NotificationBell";
 import { hardSignOut } from "@/lib/hardSignOut";
+import { useTranslations } from "next-intl";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const DASHBOARD_PATH = {
     patient: "/dashboard/patient",
     doctor: "/dashboard/doctor/appointments",
     admin: "/dashboard/admin/overview",
+    hospital_admin: "/dashboard/hospital",
 };
 
 const PROFILE_PATH = {
     patient: "/dashboard/patient/profile",
     doctor: "/dashboard/doctor/profile",
     admin: "/dashboard/admin/overview",
+    hospital_admin: "/dashboard/hospital",
 };
 
 // false on the server AND on the hydration render, true from the next paint on.
@@ -32,6 +36,7 @@ const useMounted = () =>
 
 const Navbar = () => {
     const { data: session, isPending } = authClient.useSession();
+    const t = useTranslations("nav");
     const mounted = useMounted();
     const pathname = usePathname();
     const user = session?.user;
@@ -40,13 +45,18 @@ const Navbar = () => {
     const profileHref = PROFILE_PATH[user?.role] || "/dashboard/patient/profile";
 
     const links = <>
-        <li><NavLink href="/home">Home</NavLink></li>
-        <li><NavLink href="/all-appointments">All Appointment</NavLink></li>
-        {user && <li><NavLink href={dashboardHref}>Dashboard</NavLink></li>}
+        <li><NavLink href="/home">{t("home")}</NavLink></li>
+        <li><NavLink href="/all-appointments">{t("doctors")}</NavLink></li>
+        <li><NavLink href="/hospitals">{t("hospitals")}</NavLink></li>
+        <li><NavLink href="/blood-donors">{t("blood")}</NavLink></li>
+        <li><NavLink href="/emergency"><span className="text-error font-semibold">{t("emergency")}</span></NavLink></li>
+        {user && <li><NavLink href={dashboardHref}>{t("dashboard")}</NavLink></li>}
     </>
 
+    const mobileExtras = <li className="sm:hidden mt-1 pt-1 border-t border-base-300"><LanguageSwitcher className="w-full" /></li>
+
     const handleLogout = async () => {
-        toast.success("Logged out successfully!");
+        toast.success(t("loggedOut"));
         await hardSignOut("/home");
     };
 
@@ -67,10 +77,11 @@ const Navbar = () => {
                             className="menu menu-sm dropdown-content rounded-box z-50 mt-3 w-52 p-2 shadow-xl bg-base-200 border border-primary/15"
                         >
                             {links}
+                            {mobileExtras}
                         </ul>
                     </div>
                     <div className="text-lg lg:text-xl font-black tracking-tight flex items-center gap-1.5">
-                        <Logo size={32} className="shrink-0 lg:w-9 lg:h-9" />
+                        <Logo size={36} priority className="shrink-0 w-8 h-8 lg:w-9 lg:h-9" />
                         <Link href={'/home'} className="font-bold">
                             <span className="text-base-content">Doc</span><span className="text-primary">Appoint</span>
                         </Link>
@@ -83,7 +94,8 @@ const Navbar = () => {
                     </ul>
                 </div>
 
-                <div className="navbar-end gap-3">
+                <div className="navbar-end gap-2 sm:gap-3">
+                    <LanguageSwitcher className="hidden sm:inline-flex" />
                     <ThemeController />
                     {mounted && user && <NotificationBell />}
 
@@ -107,18 +119,18 @@ const Navbar = () => {
                                 <div className="divider my-0.5" />
                                 <li>
                                     <Link href={profileHref} className="text-sm font-medium">
-                                        My Profile
+                                        {t("myProfile")}
                                     </Link>
                                 </li>
                                 <li>
                                     <Link href={dashboardHref} className="text-sm font-medium">
-                                        Dashboard
+                                        {t("dashboard")}
                                     </Link>
                                 </li>
                                 <div className="divider my-0.5" />
                                 <li>
                                     <button onClick={handleLogout} className="text-sm font-medium text-error">
-                                        Logout
+                                        {t("logout")}
                                     </button>
                                 </li>
                             </ul>
@@ -129,13 +141,13 @@ const Navbar = () => {
                                 href="/signin"
                                 className="btn btn-sm btn-primary rounded-lg text-sm font-medium"
                             >
-                                Login
+                                {t("login")}
                             </Link>
                             <Link
                                 href="/signup"
                                 className="btn btn-sm btn-primary btn-soft rounded-lg text-sm font-bold hidden sm:inline-flex"
                             >
-                                Register
+                                {t("register")}
                             </Link>
                         </div>
                     )}

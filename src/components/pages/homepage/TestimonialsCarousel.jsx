@@ -4,6 +4,7 @@ import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import { FiStar } from "react-icons/fi";
+import { useTranslations } from "next-intl";
 
 const StarDisplay = ({ rating }) => (
     <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
@@ -22,7 +23,9 @@ const StarDisplay = ({ rating }) => (
  * and filtered on the server (see PatientTestimonials) so the browser never
  * downloads the full doctor list just to render a few quotes.
  */
-const TestimonialsCarousel = ({ reviews }) => (
+const TestimonialsCarousel = ({ reviews }) => {
+    const t = useTranslations("home");
+    return (
     <Swiper
         modules={[Autoplay, Pagination]}
         autoplay={{ delay: 3500, disableOnInteraction: false }}
@@ -51,7 +54,7 @@ const TestimonialsCarousel = ({ reviews }) => (
                                 {review.userName}
                             </p>
                             <p className="text-xs text-base-content/45 truncate">
-                                Patient of {review.doctorName}
+                                {t("patientOf", { doctor: review.doctorName })}
                             </p>
                         </div>
                     </div>
@@ -60,5 +63,6 @@ const TestimonialsCarousel = ({ reviews }) => (
         ))}
     </Swiper>
 );
+};
 
 export default TestimonialsCarousel;

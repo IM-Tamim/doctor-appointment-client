@@ -1,17 +1,22 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { addReview } from "@/lib/doctors";
+import { getReviewable } from "@/lib/patient";
+import { useTranslations } from "next-intl";
+import { useFormat } from "@/lib/i18n";
 import toast from "react-hot-toast";
 import { FiStar, FiSend } from "react-icons/fi";
 
-const StarPicker = ({ value, onChange }) => (
+const StarPicker = ({ value, onChange, label }) => (
     <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((s) => (
             <button
                 key={s}
                 type="button"
                 onClick={() => onChange(s)}
+                aria-label={label(s)}
+                aria-pressed={s <= value}
                 className="transition-transform hover:scale-110"
             >
                 <FiStar
@@ -36,6 +41,8 @@ const StarDisplay = ({ rating }) => (
 );
 
 const ReviewSection = ({ doctor }) => {
+    const t = useTranslations("reviews");
+    const { locale, date: prettyDate, number } = useFormat();
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
     const [loading, setLoading] = useState(false);
@@ -43,26 +50,44 @@ const ReviewSection = ({ doctor }) => {
     const [liveRating, setLiveRating] = useState(doctor.rating);
     const [liveTotalReviews, setLiveTotalReviews] = useState(doctor.totalReviews);
     const { data: session } = authClient.useSession();
+    // Reviews belong to a completed visit — one per appointment.
+    const [visits, setVisits] = useState(null);
+    const [appointmentId, setAppointmentId] = useState("");
 
     const user = session?.user;
+
+    useEffect(() => {
+        if (!user) return;
+        (async () => {
+            const { data: tokenData } = await authClient.token();
+            const res = await getReviewable(doctor._id, tokenData?.token);
+            const list = res.ok ? res.data : [];
+            setVisits(list);
+            setAppointmentId(list[0]?._id || "");
+        })();
+    }, [user, doctor._id]);
 
     const onSubmit = async (e) => {
         e.preventDefault();
 
         if (!user) {
-            toast.error("Please login to submit a review.");
+            toast.error(t("loginFirst"));
             return;
         }
         if (rating === 0) {
-            toast.error("Please select a star rating.");
+            toast.error(t("pickStars"));
+            return;
+        }
+
+        // Only the rating and comment go over the wire — the server takes the
+        // reviewer's identity from the JWT so it can't be spoofed.
+        if (!appointmentId) {
+            toast.error(t("pickVisit"));
             return;
         }
 
         setLoading(true);
-
-        // Only the rating and comment go over the wire — the server takes the
-        // reviewer's identity from the JWT so it can't be spoofed.
-        const reviewData = { rating, comment };
+        const reviewData = { rating, comment, appointmentId };
 
         try {
             const { data: tokenData } = await authClient.token();
@@ -83,17 +108,20 @@ const ReviewSection = ({ doctor }) => {
                 date: new Date().toISOString(),
             };
             setReviews((prev) => [newReview, ...prev]);
+            const rest = (visits || []).filter((v) => v._id !== appointmentId);
+            setVisits(rest);
+            setAppointmentId(rest[0]?._id || "");
             // Mirror the server's running mean rather than the old halving formula.
             setLiveTotalReviews((prevTotal) => {
                 const nextTotal = prevTotal + 1;
                 setLiveRating(parseFloat((((liveRating * prevTotal) + rating) / nextTotal).toFixed(1)));
                 return nextTotal;
             });
-            toast.success("Review submitted successfully!");
+            toast.success(t("submitted"));
             setRating(0);
             setComment("");
         } catch {
-            toast.error("Failed to submit review.");
+            toast.error(t("failed"));
         } finally {
             setLoading(false);
         }
@@ -104,14 +132,14 @@ const ReviewSection = ({ doctor }) => {
 
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mb-6 flex items-center gap-4">
                 <div className="text-center px-6 border-r border-base-300">
-                    <p className="text-4xl font-black text-primary">{liveRating}</p>
+                    <p className="text-4xl font-black text-primary">{number(liveRating)}</p>
                     <StarDisplay rating={Math.round(liveRating)} />
-                    <p className="text-xs text-base-content/40 mt-1">{liveTotalReviews} reviews</p>
+                    <p className="text-xs text-base-content/40 mt-1">{t("count", { count: liveTotalReviews || 0 })}</p>
                 </div>
                 <div className="flex-1">
-                    <p className="text-sm font-bold text-base-content">Overall Rating</p>
+                    <p className="text-sm font-bold text-base-content">{t("overall")}</p>
                     <p className="text-xs text-base-content/50 mt-1 leading-relaxed">
-                        Based on {liveTotalReviews} patient review{liveTotalReviews !== 1 ? "s" : ""}. Rating updates instantly after each review.
+                        {t("basedOn", { count: liveTotalReviews || 0 })}
                     </p>
                 </div>
             </div>
@@ -119,34 +147,56 @@ const ReviewSection = ({ doctor }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 <div className="bg-base-100 border border-base-300 rounded-2xl p-6 flex flex-col gap-4 h-fit">
-                    <h2 className="text-lg font-black text-base-content">Leave a Review</h2>
+                    <h2 className="text-lg font-black text-base-content">{t("leave")}</h2>
 
                     {!user ? (
                         <p className="text-sm text-base-content/50">
-                            Please{" "}
+                            {t("please")}{" "}
                             <a href="/signin" className="text-primary font-semibold hover:underline">
-                                login
+                                {t("login")}
                             </a>{" "}
-                            to leave a review.
+                            {t("toLeave")}
+                        </p>
+                    ) : visits === null ? (
+                        <div className="skeleton h-24 rounded-xl" />
+                    ) : visits.length === 0 ? (
+                        <p className="text-sm text-base-content/50">
+                            {t("afterVisit", { name: doctor.name })}
                         </p>
                     ) : (
                         <form onSubmit={onSubmit} className="flex flex-col gap-4">
+                            {visits.length > 1 ? (
+                                <select
+                                    value={appointmentId}
+                                    onChange={(e) => setAppointmentId(e.target.value)}
+                                    aria-label={t("visitLabel")}
+                                    className="select select-bordered select-sm w-full rounded-xl"
+                                >
+                                    {visits.map((v) => (
+                                        <option key={v._id} value={v._id}>
+                                            {t("visitOn", { date: prettyDate(v.appointmentDate) })}{v.patientName ? ` (${v.patientName})` : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <p className="text-xs text-base-content/50">{t("reviewing", { date: prettyDate(visits[0].appointmentDate) })}</p>
+                            )}
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                    Your Rating
+                                    {t("yourRating")}
                                 </label>
-                                <StarPicker value={rating} onChange={setRating} />
+                                <StarPicker value={rating} onChange={setRating} label={(s) => t("star", { count: s })} />
                             </div>
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-widest text-base-content/60">
-                                    Your Review
+                                    {t("yourReview")}
                                 </label>
                                 <textarea
                                     value={comment}
                                     onChange={(e) => setComment(e.target.value)}
-                                    placeholder="Share your experience with this doctor..."
+                                    placeholder={t("placeholder")}
                                     rows={4}
                                     className="w-full px-4 py-3 rounded-xl text-sm bg-base-200 border border-base-300 text-base-content outline-none focus:border-primary transition-all resize-none"
                                     required
@@ -160,7 +210,7 @@ const ReviewSection = ({ doctor }) => {
                             >
                                 {loading
                                     ? <span className="loading loading-spinner loading-xs" />
-                                    : <><FiSend size={14} /> Submit Review</>
+                                    : <><FiSend size={14} /> {t("submit")}</>
                                 }
                             </button>
 
@@ -171,9 +221,9 @@ const ReviewSection = ({ doctor }) => {
                 {/* Reviews List */}
                 <div className="lg:col-span-2 flex flex-col gap-4">
                     <h2 className="text-lg font-black text-base-content">
-                        Patient Reviews
+                        {t("patientReviews")}
                         <span className="text-sm font-normal text-base-content/40 ml-2">
-                            ({reviews.length})
+                            ({number(reviews.length)})
                         </span>
                     </h2>
 
@@ -182,8 +232,8 @@ const ReviewSection = ({ doctor }) => {
                             <div className="w-14 h-14 rounded-full bg-base-200 flex items-center justify-center">
                                 <FiStar size={22} className="text-base-content/20" />
                             </div>
-                            <p className="text-sm font-semibold text-base-content/50">No reviews yet</p>
-                            <p className="text-xs text-base-content/40">Be the first to review this doctor.</p>
+                            <p className="text-sm font-semibold text-base-content/50">{t("none")}</p>
+                            <p className="text-xs text-base-content/40">{t("beFirst")}</p>
                         </div>
                     ) : (
                         <div className="flex flex-col gap-4">
@@ -200,7 +250,7 @@ const ReviewSection = ({ doctor }) => {
                                             <div>
                                                 <p className="text-sm font-bold text-base-content">{review.userName}</p>
                                                 <p className="text-xs text-base-content/40">
-                                                    {new Date(review.date).toLocaleDateString("en-GB", {
+                                                    {new Date(review.date).toLocaleDateString(locale === "bn" ? "bn-BD" : "en-GB", {
                                                         day: "numeric",
                                                         month: "short",
                                                         year: "numeric",

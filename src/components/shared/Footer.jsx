@@ -1,7 +1,9 @@
 import { FaGithub, FaFacebook, FaLinkedin, FaEnvelope, FaPhone } from "react-icons/fa";
 import Logo from "./Logo";
+import { getTranslations } from "next-intl/server";
 
-const Footer = () => {
+const Footer = async () => {
+    const t = await getTranslations("footer");
     return (
         <footer className="bg-base-200 text-base-content border-t border-base-300 mt-auto safe-bottom safe-x">
             <div className="max-w-7xl mx-auto px-6 py-12">
@@ -17,14 +19,14 @@ const Footer = () => {
                             </h2>
                         </div>
                         <p className="text-sm text-base-content/60 leading-relaxed max-w-sm">
-                            Your health, our priority. Book instantly.
+                            {t("tagline")}
                         </p>
                         <div className="w-40 h-0.5 rounded-full bg-gradient-to-r from-primary to-secondary opacity-60"></div>
                     </div>
 
                     <div className="space-y-4 flex flex-col items-center sm:items-start">
                         <h3 className="text-xs font-semibold tracking-widest uppercase text-primary">
-                            Follow Us
+                            {t("follow")}
                         </h3>
                         <div className="flex gap-4">
                             {[
@@ -48,7 +50,7 @@ const Footer = () => {
 
                     <div className="space-y-4 flex flex-col items-center sm:items-start">
                         <h3 className="text-xs font-semibold tracking-widest uppercase text-primary">
-                            Contact Us
+                            {t("contact")}
                         </h3>
                         <div className="space-y-3">
                             {[
@@ -81,10 +83,10 @@ const Footer = () => {
 
                 <div className="flex flex-col sm:flex-row justify-around items-center gap-4 text-center">
                     <p className="text-xs text-base-content/40">
-                        © {new Date().getFullYear()} DocAppoint. All rights reserved.
+                        © {new Date().getFullYear()} DocAppoint. {t("rights")}
                     </p>
                     <div className="flex gap-1 items-center">
-                        <span className="text-xs text-base-content/40">Created by</span>
+                        <span className="text-xs text-base-content/40">{t("createdBy")}</span>
                         <span className="text-xs font-bold text-gradient">IMT</span>
                     </div>
                 </div>

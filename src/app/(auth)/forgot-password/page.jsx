@@ -4,8 +4,12 @@ import Link from "next/link";
 import { FiArrowLeft, FiMail, FiCheckCircle, FiSend } from "react-icons/fi";
 import { authClient } from "@/lib/auth-client";
 import toast from "react-hot-toast";
+import { LogoFull } from "@/components/shared/Logo";
+import { useTranslations } from "next-intl";
 
 const ForgotPasswordPage = () => {
+    const t = useTranslations("auth.forgot");
+    const tc = useTranslations("auth");
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
@@ -25,12 +29,12 @@ const ForgotPasswordPage = () => {
                 redirectTo: `${window.location.origin}/reset-password`,
             });
             if (error) {
-                toast.error(error.message || "Could not send the reset link.");
+                toast.error(error.message || t("sendFailed"));
                 return;
             }
             setSent(true);
         } catch {
-            toast.error("Could not reach the server. Please try again.");
+            toast.error(t("network"));
         } finally {
             setLoading(false);
         }
@@ -41,11 +45,10 @@ const ForgotPasswordPage = () => {
             <div className="w-full max-w-md animate-fade-up">
 
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-black tracking-tight text-base-content">
-                        Doc<span className="text-gradient">Appoint</span>
-                    </h1>
-                    <p className="text-sm mt-1 text-base-content/60">
-                        {sent ? "Check your inbox" : "Forgot your password?"}
+                    <LogoFull size={112} priority className="mx-auto shadow-lg" />
+                    <h1 className="sr-only">DocAppoint</h1>
+                    <p className="text-sm mt-3 text-base-content/60">
+                        {sent ? t("checkInbox") : t("title")}
                     </p>
                 </div>
 
@@ -58,22 +61,20 @@ const ForgotPasswordPage = () => {
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-base-content mb-2">
-                                    Reset link sent
+                                    {t("sentTitle")}
                                 </h2>
                                 <p className="text-sm text-base-content/60 leading-relaxed">
-                                    If an account exists for{" "}
-                                    <span className="font-semibold text-base-content break-all">{email}</span>,
-                                    a password reset link is on its way. It expires in 1 hour.
+                                    {t.rich("sentText", { email, b: (c) => <span className="font-semibold text-base-content break-all">{c}</span> })}
                                 </p>
                             </div>
 
                             <p className="text-xs text-base-content/45">
-                                Didn&apos;t get it? Check your spam folder, or{" "}
+                                {t("notReceived")}{" "}
                                 <button
                                     onClick={() => setSent(false)}
                                     className="text-primary font-semibold hover:underline"
                                 >
-                                    try another address
+                                    {t("another")}
                                 </button>
                                 .
                             </p>
@@ -82,7 +83,7 @@ const ForgotPasswordPage = () => {
                                 href="/signin"
                                 className="btn btn-primary btn-outline w-full rounded-xl text-sm font-bold gap-2"
                             >
-                                <FiArrowLeft size={15} /> Back to Login
+                                <FiArrowLeft size={15} /> {t("back")}
                             </Link>
                         </div>
                     ) : (
@@ -92,8 +93,7 @@ const ForgotPasswordPage = () => {
                                     <FiMail className="text-primary" size={24} />
                                 </div>
                                 <p className="text-sm text-base-content/60 leading-relaxed">
-                                    Enter the email you registered with and we&apos;ll send you a
-                                    link to set a new password.
+                                    {t("intro")}
                                 </p>
                             </div>
 
@@ -102,7 +102,7 @@ const ForgotPasswordPage = () => {
                                     htmlFor="reset-email"
                                     className="text-xs font-semibold uppercase tracking-widest text-base-content/60"
                                 >
-                                    Email
+                                    {tc("email")}
                                 </label>
                                 <div className="relative">
                                     <FiMail
@@ -130,7 +130,7 @@ const ForgotPasswordPage = () => {
                                 {loading ? (
                                     <span className="loading loading-spinner loading-xs" />
                                 ) : (
-                                    <>Send reset link <FiSend size={15} /></>
+                                    <>{t("send")} <FiSend size={15} /></>
                                 )}
                             </button>
 
@@ -138,7 +138,7 @@ const ForgotPasswordPage = () => {
                                 href="/signin"
                                 className="text-xs text-center text-base-content/50 hover:text-primary transition-colors flex items-center justify-center gap-1.5"
                             >
-                                <FiArrowLeft size={13} /> Back to Login
+                                <FiArrowLeft size={13} /> {t("back")}
                             </Link>
                         </form>
                     )}

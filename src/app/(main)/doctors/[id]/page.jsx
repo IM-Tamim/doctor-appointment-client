@@ -1,19 +1,25 @@
 import { getDoctorByIdCached } from "@/lib/doctors";
-import { FiMapPin, FiClock, FiStar, FiUser, FiAward, FiCalendar, FiDollarSign } from "react-icons/fi";
+import { FiMapPin, FiClock, FiStar, FiUser, FiAward, FiCalendar, FiDollarSign, FiVideo, FiRepeat } from "react-icons/fi";
+import { notFound } from "next/navigation";
+import { scheduleRows, slotMinutesOf, weekdayName, localNumber, localYears } from "@/lib/schedule";
+import SaveDoctorButton from "@/components/shared/SaveDoctorButton";
 import { MdOutlineLocalHospital } from "react-icons/md";
 import Image from "next/image";
 import BookingModal from "@/components/pages/all-appointments/BookingModal";
 import ReviewSection from "@/components/pages/all-appointments/ReviewSection";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import Link from "next/link";
+import { cld } from "@/lib/cloudinary";
+import { getLocale, getTranslations } from "next-intl/server";
 
 export const generateMetadata = async ({ params }) => {
     const { id } = await params;
     const { token } = await auth.api.getToken({ headers: await headers() });
     const doctor = await getDoctorByIdCached(id, token);
     return {
-        title: `${doctor.name} | DocAppoint`,
-        description: doctor.bio,
+        title: doctor?.name ? `${doctor.name} | DocAppoint` : (await getTranslations("doctor"))("metaTitle"),
+        description: doctor?.bio,
     };
 };
 
@@ -23,6 +29,15 @@ const DoctorDetailsPage = async ({ params }) => {
         headers: await headers()
     });
     const doctor = await getDoctorByIdCached(id, token);
+    if (!doctor?._id) notFound();
+
+    const locale = await getLocale();
+    const t = await getTranslations("doctor");
+    const tc = await getTranslations("common");
+    const ts = await getTranslations("common.specialties");
+    const rows = scheduleRows(doctor, locale);
+    const num = (n) => localNumber(n ?? 0, locale);
+    const consultationType = doctor.consultationType || "in-person";
 
     return (
         <div className="min-h-screen bg-linear-to-br from-base-200 via-base-200 to-base-300">
@@ -38,14 +53,15 @@ const DoctorDetailsPage = async ({ params }) => {
                             <div className="relative w-full lg:w-72 shrink-0">
                                 <div className="relative w-full h-80 lg:h-72 rounded-2xl overflow-hidden border-2 border-base-300 shadow-lg group">
                                     <Image
-                                        src={doctor.image}
+                                        src={cld(doctor.image) || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=0e9080&color=fff&size=400&bold=true`}
                                         alt={doctor.name}
                                         fill
                                         className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
                                     />
-                                    <div className="absolute top-3 right-3 bg-primary/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-                                        Verified
+                                    <div className="absolute top-3 left-3 bg-primary/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                                        {t("verified")}
                                     </div>
+                                    <SaveDoctorButton doctorId={doctor._id} className="absolute top-3 right-3" />
                                 </div>
                             </div>
 
@@ -54,12 +70,20 @@ const DoctorDetailsPage = async ({ params }) => {
                                 <div>
                                     <div className="flex flex-wrap items-center gap-2 mb-3">
                                         <span className="text-xs font-bold uppercase tracking-wider bg-primary/15 text-primary px-4 py-1.5 rounded-full border border-primary/30">
-                                            {doctor.specialty}
+                                            {ts.has(doctor.specialty) ? ts(doctor.specialty) : doctor.specialty}
                                         </span>
-                                        <span className="text-xs font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-full flex items-center gap-1">
-                                            <FiAward size={12} />
-                                            Top Rated
-                                        </span>
+                                        {doctor.rating >= 4.5 && (
+                                            <span className="text-xs font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-full flex items-center gap-1">
+                                                <FiAward size={12} />
+                                                {t("topRated")}
+                                            </span>
+                                        )}
+                                        {consultationType !== "in-person" && (
+                                            <span className="text-xs font-medium bg-info/15 text-info px-3 py-1.5 rounded-full flex items-center gap-1">
+                                                <FiVideo size={12} />
+                                                {consultationType === "online" ? t("onlineOnly") : t("videoAvailable")}
+                                            </span>
+                                        )}
                                     </div>
                                     <h1 className="text-3xl md:text-4xl font-black text-base-content leading-tight">
                                         {doctor.name}
@@ -67,7 +91,7 @@ const DoctorDetailsPage = async ({ params }) => {
                                     <div className="flex items-center gap-2 mt-2">
                                         <p className="text-sm text-base-content/60 flex items-center gap-1">
                                             <FiUser size={12} />
-                                            {doctor.experience || "Experience not listed"}
+                                            {localYears(doctor.experience, locale) || t("noExperience")}
                                         </p>
                                     </div>
                                 </div>
@@ -78,8 +102,14 @@ const DoctorDetailsPage = async ({ params }) => {
                                             <MdOutlineLocalHospital size={18} className="text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-base-content/40 font-medium">Hospital</p>
-                                            <p className="text-sm font-semibold text-base-content">{doctor.hospital}</p>
+                                            <p className="text-xs text-base-content/40 font-medium">{t("hospital")}</p>
+                                            {doctor.hospitalId ? (
+                                                <Link href={`/hospitals/${doctor.hospitalId}`} className="text-sm font-semibold text-base-content hover:text-primary">
+                                                    {doctor.hospital}
+                                                </Link>
+                                            ) : (
+                                                <p className="text-sm font-semibold text-base-content">{doctor.hospital || tc("independent")}</p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -88,8 +118,8 @@ const DoctorDetailsPage = async ({ params }) => {
                                             <FiMapPin size={18} className="text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-base-content/40 font-medium">Location</p>
-                                            <p className="text-sm font-semibold text-base-content">{doctor.location || "Not specified"}</p>
+                                            <p className="text-xs text-base-content/40 font-medium">{t("location")}</p>
+                                            <p className="text-sm font-semibold text-base-content">{doctor.location || t("notSpecified")}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -97,41 +127,38 @@ const DoctorDetailsPage = async ({ params }) => {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <FiClock size={14} className="text-primary" />
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-base-content/60">Available Time Slots</p>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-base-content/60">
+                                            {t("schedule", { minutes: num(slotMinutesOf(doctor)) })}
+                                        </p>
                                     </div>
-                                    <div className="flex flex-col gap-2">
-                                        {(doctor.availability || []).filter((d) => d.slots?.length > 0).length === 0 ? (
-                                            <p className="text-xs text-base-content/40">No availability set yet.</p>
-                                        ) : (
-                                            (doctor.availability || [])
-                                                .filter((d) => d.slots?.length > 0)
-                                                .map((d) => (
-                                                    <div key={d.day} className="flex items-start gap-2">
-                                                        <span className="text-xs font-bold text-base-content/70 w-20 shrink-0 pt-2">{d.day}</span>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {d.slots.map((s, i) => (
-                                                                <span
-                                                                    key={i}
-                                                                    className="text-xs flex items-center gap-1.5 bg-base-200 border border-base-300 px-3 py-2 rounded-lg text-base-content/70 font-medium hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
-                                                                >
-                                                                    <FiClock size={10} className="text-primary" />
-                                                                    {s}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))
-                                        )}
-                                    </div>
+                                    {rows.every((r) => r.ranges.length === 0) ? (
+                                        <p className="text-xs text-base-content/40">{t("noSchedule")}</p>
+                                    ) : (
+                                        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                                            {rows.map((r) => (
+                                                <div key={r.day} className="flex items-start gap-2 text-xs">
+                                                    <span className="font-bold text-base-content/70 w-20 shrink-0">{weekdayName(r.day, locale)}</span>
+                                                    <span className={r.ranges.length ? "text-base-content/70" : "text-base-content/35"}>
+                                                        {r.ranges.length ? r.ranges.join(", ") : t("closed")}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-base-300 mt-2">
                                     <div>
-                                        <p className="text-xs text-base-content/40 font-semibold uppercase tracking-wider">Consultation Fee</p>
+                                        <p className="text-xs text-base-content/40 font-semibold uppercase tracking-wider">{t("fee")}</p>
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-3xl font-black text-primary">৳{doctor.fee}</span>
-                                            <span className="text-xs text-base-content/40">/ per visit</span>
+                                            <span className="text-3xl font-black text-primary">৳{num(doctor.fee)}</span>
+                                            <span className="text-xs text-base-content/40">{t("perVisit")}</span>
                                         </div>
+                                        {doctor.followUpFeePercent < 100 && (
+                                            <p className="text-[11px] text-success flex items-center gap-1 mt-0.5">
+                                                <FiRepeat size={10} /> {doctor.followUpFeePercent === 0 ? t("followUpFree") : t("followUpPercent", { percent: num(doctor.followUpFeePercent) })}
+                                            </p>
+                                        )}
                                     </div>
                                     <BookingModal doctor={doctor} />
                                 </div>
@@ -146,10 +173,10 @@ const DoctorDetailsPage = async ({ params }) => {
                     <div className="p-6 md:p-8">
                         <h2 className="text-xl font-black text-base-content mb-4 flex items-center gap-2">
                             <span className="w-1 h-6 bg-primary rounded-full"></span>
-                            About the Doctor
+                            {t("about")}
                         </h2>
                         <p className="text-base-content/70 leading-relaxed">
-                            {doctor.bio || "No bio provided yet."}
+                            {doctor.bio || t("noBio")}
                         </p>
                     </div>
                 </div>
@@ -159,22 +186,22 @@ const DoctorDetailsPage = async ({ params }) => {
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
                             <FiCalendar className="text-primary" size={18} />
                         </div>
-                        <p className="text-xs text-base-content/40">Years of Experience</p>
-                        <p className="text-lg font-bold text-base-content">{doctor.experience || "—"}</p>
+                        <p className="text-xs text-base-content/40">{t("years")}</p>
+                        <p className="text-lg font-bold text-base-content">{localYears(doctor.experience, locale) || "—"}</p>
                     </div>
                     <div className="bg-base-100 rounded-xl border border-base-300 p-4 text-center">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
                             <FiStar className="text-primary fill-primary/20" size={18} />
                         </div>
-                        <p className="text-xs text-base-content/40">Patient Rating</p>
-                        <p className="text-lg font-bold text-base-content">{doctor.rating} / 5.0</p>
+                        <p className="text-xs text-base-content/40">{t("rating")}</p>
+                        <p className="text-lg font-bold text-base-content">{num(doctor.rating)} / {num(5)}</p>
                     </div>
                     <div className="bg-base-100 rounded-xl border border-base-300 p-4 text-center">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
                             <FiDollarSign className="text-primary" size={18} />
                         </div>
-                        <p className="text-xs text-base-content/40">Consultation Fee</p>
-                        <p className="text-lg font-bold text-primary">৳{doctor.fee}</p>
+                        <p className="text-xs text-base-content/40">{t("fee")}</p>
+                        <p className="text-lg font-bold text-primary">৳{num(doctor.fee)}</p>
                     </div>
                 </div>
             </div>

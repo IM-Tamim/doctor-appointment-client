@@ -23,7 +23,12 @@ import { getSessionCookie } from "better-auth/cookies";
  * A forged cookie gets you a redirect-free page load and nothing else; every
  * piece of data on it still requires a valid token.
  */
+// Shows only a payment outcome; it must also open in the phone's browser,
+// where a patient paying from the mobile app isn't signed in.
+const PUBLIC_PATHS = new Set(["/payment/result"]);
+
 export const proxy = (request) => {
+    if (PUBLIC_PATHS.has(request.nextUrl.pathname)) return NextResponse.next();
     const sessionCookie = getSessionCookie(request);
 
     if (sessionCookie) {
@@ -37,5 +42,5 @@ export const proxy = (request) => {
 };
 
 export const config = {
-    matcher: ["/dashboard/:path*", "/doctors/:path*"],
+    matcher: ["/dashboard/:path*", "/doctors/:path*", "/payment/:path*"],
 };

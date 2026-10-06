@@ -1,4 +1,6 @@
-import { Geist } from "next/font/google";
+import { Geist, Hind_Siliguri } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import SessionGuard from "@/components/shared/SessionGuard";
@@ -7,6 +9,14 @@ import ServiceWorker from "@/components/shared/ServiceWorker";
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
+});
+
+// Bangla UI text. Only applied when the page language is Bangla (globals.css).
+const hindSiliguri = Hind_Siliguri({
+  subsets: ["bengali", "latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-bn",
   display: "swap",
 });
 
@@ -26,6 +36,8 @@ export const viewport = {
 };
 
 export const metadata = {
+  // Absolute base for the Open Graph / icon URLs.
+  metadataBase: new URL(process.env.BETTER_AUTH_URL || "http://localhost:3000"),
   applicationName: "DocAppoint",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -56,18 +68,20 @@ const themeScript = `
 })();
 `;
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const locale = await getLocale();
   return (
     // No data-theme here on purpose. When React owns that attribute it
     // reconciles it back to this value during hydration, wiping out whatever
     // the inline script below set from localStorage — which is exactly why the
     // app snapped back to light on every refresh. Leaving it off means React
     // has no opinion about the attribute and the script is the only owner.
-    <html lang="en" className={geist.variable} suppressHydrationWarning>
+    <html lang={locale} className={`${geist.variable} ${hindSiliguri.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen flex flex-col bg-base-100 text-base-content">
+        <NextIntlClientProvider>
         {children}
         <SessionGuard />
         <ServiceWorker />
@@ -83,6 +97,7 @@ export default function RootLayout({ children }) {
             },
           }}
         />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

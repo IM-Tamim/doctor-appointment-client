@@ -1,95 +1,156 @@
 "use client";
-import { useEffect, useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import { getAdminStats } from "@/lib/admin";
-import { useRouter } from "next/navigation";
+import { api } from "@/lib/http";
+import { useApiData, unwrap } from "@/lib/useApiData";
 import { hardSignOut } from "@/lib/hardSignOut";
 import { FaUserInjured, FaUserMd, FaHourglassHalf, FaCalendarCheck } from "react-icons/fa";
+import { useTranslations } from "next-intl";
+import { useFormat, useLabel } from "@/lib/i18n";
+
+// recharts is heavy and only this page uses it — keep it out of every other bundle.
+const AnalyticsCharts = dynamic(() => import("@/components/pages/admin/AnalyticsCharts"), {
+    ssr: false,
+    loading: () => (
+        <div className="grid lg:grid-cols-2 gap-5">
+            <div className="skeleton h-72 rounded-2xl lg:col-span-2" />
+            <div className="skeleton h-64 rounded-2xl" />
+            <div className="skeleton h-64 rounded-2xl" />
+        </div>
+    ),
+});
 
 const CARDS = [
-    { key: "totalPatients", label: "Total Patients", icon: FaUserInjured, color: "text-info" },
-    { key: "totalDoctors", label: "Approved Doctors", icon: FaUserMd, color: "text-success" },
-    { key: "pendingDoctors", label: "Pending Applications", icon: FaHourglassHalf, color: "text-warning" },
-    { key: "totalAppointments", label: "Total Appointments", icon: FaCalendarCheck, color: "text-primary" },
+    { key: "totalPatients", icon: FaUserInjured, color: "text-info" },
+    { key: "totalDoctors", icon: FaUserMd, color: "text-success" },
+    { key: "pendingDoctors", icon: FaHourglassHalf, color: "text-warning" },
+    { key: "totalAppointments", icon: FaCalendarCheck, color: "text-primary" },
 ];
 
+const RANGES = [7, 30, 90, 365];
+
 const AdminOverviewPage = () => {
-    const { data: session } = authClient.useSession();
-    const router = useRouter();
-    const [stats, setStats] = useState(null);
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(true);
+    const ta = useTranslations("admin");
+    const t = useTranslations("admin.overview");
+    const specialtyName = useLabel("common.specialties");
+    const { locale, date, money, number } = useFormat();
+    const taka = (n) => money(Math.round(n || 0));
+    const pct = (r) => `${(r * 100).toLocaleString(locale === "bn" ? "bn-BD" : "en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+    const [days, setDays] = useState(30);
+
+    const stats = useApiData(async (token) => {
+        const result = await getAdminStats(token);
+        if (result?.message) throw new Error(result.message);
+        return result;
+    });
+    const analytics = useApiData(async (token) => unwrap(await api(`/admin/analytics?days=${days}`, { token })), [days]);
+    const a = analytics.data;
 
     const handleRepairSession = async () => {
         await hardSignOut(`/signin?callbackUrl=/dashboard/admin/overview`);
     };
 
-    useEffect(() => {
-        const load = async () => {
-            if (!session) return;
-            setLoading(true);
-            setError("");
-            try {
-                const { data: tokenData, error: tokenError } = await authClient.token();
-                if (tokenError || !tokenData?.token) {
-                    setError(
-                        `Couldn't get an auth token from Better Auth: ${tokenError?.message || "no token was returned"}. ` +
-                        `This happens before the role check even runs — check that the JWT plugin is configured correctly and CLIENT_URL/BETTER_AUTH_URL match your running dev server.`
-                    );
-                    setLoading(false);
-                    return;
-                }
-                const result = await getAdminStats(tokenData.token);
-                if (result?.message) {
-                    // Server rejected the request (e.g. stale role in the token) —
-                    // surface it instead of silently showing zeros everywhere.
-                    setError(result.message);
-                    setStats(null);
-                } else {
-                    setStats(result);
-                }
-            } catch {
-                setError("Couldn't reach the server. Is it running?");
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
-    }, [session]);
-
     return (
-        <div className="p-6 lg:p-8 max-w-5xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-black mb-8">
-                Platform <span className="text-primary">Overview</span>
+        <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+            <h1 className="text-2xl md:text-3xl font-black">
+                {t("title1")} <span className="text-primary">{t("title2")}</span>
             </h1>
 
-            {loading ? (
-                <div className="flex justify-center py-12">
-                    <span className="loading loading-spinner loading-lg text-primary" />
-                </div>
-            ) : error ? (
-                <div className="alert alert-primary/10 border border-primary/30 rounded-2xl flex-col items-start gap-3">
+            {stats.error ? (
+                <div className="alert border border-primary/30 rounded-2xl flex-col items-start gap-3">
                     <p className="text-sm">
-                        <span className="font-bold">Could not load stats:</span> {error}
+                        <span className="font-bold">{t("statsFailed")}</span> {stats.error}
                     </p>
                     <button onClick={handleRepairSession} className="btn btn-sm btn-primary">
-                        Log out & sign in again
+                        {ta("relogin")}
                     </button>
                 </div>
             ) : (
-                <div className="grid sm:grid-cols-2 gap-5">
-                    {CARDS.map(({ key, label, icon: Icon, color }) => (
-                        <div key={key} className="bg-base-100 rounded-2xl border border-base-300 p-6 flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-full bg-base-200 flex items-center justify-center ${color}`}>
-                                <Icon size={20} />
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {CARDS.map(({ key, icon: Icon, color }) => (
+                        <div key={key} className="bg-base-100 rounded-2xl border border-base-300 p-5 flex items-center gap-4">
+                            <div className={`w-11 h-11 rounded-full bg-base-200 flex items-center justify-center ${color}`}>
+                                <Icon size={18} />
                             </div>
                             <div>
-                                <p className="text-2xl font-black">{stats?.[key] ?? 0}</p>
-                                <p className="text-sm text-base-content/60">{label}</p>
+                                {stats.loading ? <div className="skeleton h-7 w-12" /> : <p className="text-2xl font-black">{number(stats.data?.[key] ?? 0)}</p>}
+                                <p className="text-xs text-base-content/60">{t(`cards.${key}`)}</p>
                             </div>
                         </div>
                     ))}
                 </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <h2 className="text-lg font-black">{t("analytics")}</h2>
+                <div className="join" role="group" aria-label={t("range")}>
+                    {RANGES.map((r) => (
+                        <button
+                            key={r}
+                            onClick={() => setDays(r)}
+                            aria-pressed={days === r}
+                            className={`btn btn-sm join-item ${days === r ? "btn-primary" : "btn-ghost border-base-300"}`}
+                        >
+                            {r === 365 ? t("year") : t("days", { count: number(r) })}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {analytics.error ? (
+                <p className="text-sm text-error">{analytics.error}</p>
+            ) : !a ? (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
+                </div>
+            ) : (
+                <>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { label: t("net"), value: taka(a.totals.revenue), hint: t("refunded", { amount: taka(a.totals.refunded) }) },
+                            { label: t("bookings"), value: number(a.totals.bookings), hint: `${date(a.range.from)} → ${date(a.range.to)}` },
+                            { label: t("cancelRate"), value: pct(a.totals.cancellationRate), hint: t("cancelled", { count: number(a.totals.status.cancelled || 0) }) },
+                            { label: t("noShowRate"), value: pct(a.totals.noShowRate), hint: t("visits", { noShow: number(a.totals.status.no_show || 0), total: number((a.totals.status.completed || 0) + (a.totals.status.no_show || 0)) }) },
+                        ].map((tile) => (
+                            <div key={tile.label} className="bg-base-100 rounded-2xl border border-base-300 p-5">
+                                <p className="text-xs text-base-content/55">{tile.label}</p>
+                                <p className="text-3xl font-black tabular-nums mt-1">{tile.value}</p>
+                                <p className="text-[11px] text-base-content/45 mt-1">{tile.hint}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <AnalyticsCharts data={a} />
+
+                    <section className="bg-base-100 border border-base-300 rounded-2xl p-5">
+                        <h2 className="font-bold text-sm mb-3">{t("topDoctors")}</h2>
+                        {a.topDoctors.length === 0 ? (
+                            <p className="text-sm text-base-content/50">{t("noBookings")}</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="table table-sm">
+                                    <thead>
+                                        <tr><th>#</th><th>{t("doctor")}</th><th>{t("specialty")}</th><th className="text-right">{t("bookings")}</th><th className="text-right">{t("completed")}</th><th className="text-right">{t("revenue")}</th><th className="text-right">{t("rating")}</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {a.topDoctors.map((d, i) => (
+                                            <tr key={d.doctorId}>
+                                                <td className="text-base-content/50">{number(i + 1)}</td>
+                                                <td className="font-semibold">{d.name}</td>
+                                                <td className="text-base-content/70">{specialtyName(d.specialty)}</td>
+                                                <td className="text-right tabular-nums">{number(d.bookings)}</td>
+                                                <td className="text-right tabular-nums">{number(d.completed)}</td>
+                                                <td className="text-right tabular-nums">{taka(d.revenue)}</td>
+                                                <td className="text-right tabular-nums">{d.rating != null ? number(d.rating) : "—"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
+                </>
             )}
         </div>
     );

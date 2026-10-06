@@ -3,7 +3,8 @@ import { authClient } from "@/lib/auth-client";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-const PRIVATE_ROUTES = ["/dashboard", "/doctors/"];
+const PRIVATE_ROUTES = ["/dashboard", "/doctors/", "/payment/"];
+const PUBLIC_ROUTES = ["/payment/result"];
 
 const SessionGuard = () => {
     const { data: session, isPending } = authClient.useSession();
@@ -12,7 +13,7 @@ const SessionGuard = () => {
 
     useEffect(() => {
         if (isPending) return;
-        const isPrivate = PRIVATE_ROUTES.some((route) => pathname.startsWith(route));
+        const isPrivate = PRIVATE_ROUTES.some((route) => pathname.startsWith(route)) && !PUBLIC_ROUTES.includes(pathname);
         if (isPrivate && !session) {
             router.replace("/signin");
         }
