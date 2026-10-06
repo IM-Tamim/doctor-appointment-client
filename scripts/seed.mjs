@@ -17,7 +17,7 @@ dotenv.config();
 
 const { auth } = await import("../src/lib/auth.js");
 const { MongoClient } = await import("mongodb");
-const { HOSPITALS, HOSPITAL_PHOTOS, DOCTORS, SCHEDULES, bioFor } = await import("./seed-data.mjs");
+const { HOSPITALS, DOCTORS, SCHEDULES, bioFor, hospitalDoc } = await import("./seed-data.mjs");
 const { buildHistory, buildDonors, AMBULANCE_PLAN, clinicToday, addDays } = await import("./seed-history.mjs");
 const { ObjectId } = await import("mongodb");
 
@@ -138,20 +138,8 @@ async function run() {
   console.log("\nSeeding hospitals...");
   const hospitalByKey = {};
   for (const [i, h] of HOSPITALS.entries()) {
-    const { key, code, ...fields } = h;
-    const n = String(i + 1).padStart(2, "0");
-    const doc = {
-      ...fields,
-      // Placeholders — see seed-data.mjs.
-      phone: `${code}-0000${n}1`,
-      emergencyPhone: `${code}-0000${n}9`,
-      logo: "",
-      image: "",
-      imageCredit: "",
-      imageSource: "",
-      ...HOSPITAL_PHOTOS[key],
-      createdAt: new Date(),
-    };
+    const { key } = h;
+    const doc = hospitalDoc(h, i);
     const { insertedId } = await db.collection("hospitals").insertOne(doc);
     hospitalByKey[key] = { id: insertedId.toString(), name: h.name, city: h.city };
     console.log(`  ${h.name} (${h.city})`);

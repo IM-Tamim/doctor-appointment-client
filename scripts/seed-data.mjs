@@ -60,8 +60,7 @@ export const bioFor = (d, hospitalName) =>
 
 // Cover photos: freely licensed pictures from Wikimedia Commons, cropped to
 // 16:10 and saved as WebP in next/public/hospitals. The credit is shown under
-// the photo on the hospital's page, as the licences require. Hospitals with no
-// freely licensed photo keep the designed cover until an admin uploads one.
+// the photo on the hospital's page, as the licences require.
 export const HOSPITAL_PHOTOS = {
   "dmch": { image: "/hospitals/dmch.webp", imageCredit: "Jashem farhan · CC BY-SA 3.0 · Wikimedia Commons (cropped)", imageSource: "https://commons.wikimedia.org/wiki/File:DMC1.jpg" },
   "bmu": { image: "/hospitals/bmu.webp", imageCredit: "Motiur Rahman Oni · CC BY-SA 4.0 · Wikimedia Commons (cropped)", imageSource: "https://commons.wikimedia.org/wiki/File:Bangabandhu_Sheikh_Mujib_Medical_University_(01).jpg" },
@@ -80,6 +79,31 @@ export const HOSPITAL_PHOTOS = {
   "mmch": { image: "/hospitals/mmch.webp", imageCredit: "Hermitage17 · Public domain · Wikimedia Commons (cropped)", imageSource: "https://commons.wikimedia.org/wiki/File:MMCH.JPG" },
   "comch": { image: "/hospitals/comch.webp", imageCredit: "DelwarHossain · CC BY-SA 4.0 · Wikimedia Commons (cropped)", imageSource: "https://commons.wikimedia.org/wiki/File:Comilla_Medical_college.png" },
   "szmch": { image: "/hospitals/szmch.webp", imageCredit: "মুসফিক মুন্না · CC BY-SA 4.0 · Wikimedia Commons (cropped)", imageSource: "https://commons.wikimedia.org/wiki/File:A_Hospital_of_Bogra.jpg" },
+  // Supplied by the project owner (no credit line): one building photo and
+  // four hospital logos set on a white cover, which also serve as the logo.
+  "evercare-ctg": { image: "/hospitals/evercare-ctg.webp", imageCredit: "", imageSource: "" },
+  "bsh": { image: "/hospitals/bsh.webp", logo: "/hospitals/logos/bsh.webp", imageCredit: "", imageSource: "" },
+  "ibnsina": { image: "/hospitals/ibnsina.webp", logo: "/hospitals/logos/ibnsina.webp", imageCredit: "", imageSource: "" },
+  "cmosh": { image: "/hospitals/cmosh.webp", logo: "/hospitals/logos/cmosh.webp", imageCredit: "", imageSource: "" },
+  "mountadora": { image: "/hospitals/mountadora.webp", logo: "/hospitals/logos/mountadora.webp", imageCredit: "", imageSource: "" },
+};
+
+/** The database document for HOSPITALS[i] (shared by seed.mjs and reseed-hospitals.mjs). */
+export const hospitalDoc = (h, i) => {
+  const { key, code, ...fields } = h;
+  const n = String(i + 1).padStart(2, "0");
+  return {
+    ...fields,
+    // Placeholders — real hospital numbers aren't published here.
+    phone: `${code}-0000${n}1`,
+    emergencyPhone: `${code}-0000${n}9`,
+    logo: "",
+    image: "",
+    imageCredit: "",
+    imageSource: "",
+    ...HOSPITAL_PHOTOS[key],
+    createdAt: new Date(),
+  };
 };
 
 // [code] → area code used for placeholder numbers.

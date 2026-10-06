@@ -1,6 +1,6 @@
 // Adds the cover photos from seed-data.mjs to hospitals that are already in
 // the database, matched by name. Safe to run on live data: it only sets the
-// image fields, and never overwrites a photo an admin uploaded.
+// image and logo fields, and never overwrites a photo or logo an admin uploaded.
 //
 //   node scripts/add-hospital-photos.mjs
 //   DB_NAME=DocAppoint_dev node scripts/add-hospital-photos.mjs
@@ -21,11 +21,20 @@ try {
   for (const h of HOSPITALS) {
     const photo = HOSPITAL_PHOTOS[h.key];
     if (!photo) continue;
+    const { logo, ...cover } = photo;
     const result = await hospitals.updateOne(
       { name: h.name, $or: [{ image: { $exists: false } }, { image: "" }, { image: { $regex: "^/hospitals/" } }] },
-      { $set: photo }
+      { $set: cover }
     );
-    console.log(`${result.modifiedCount ? "updated" : result.matchedCount ? "unchanged" : "skipped"}  ${h.name}`);
+    // Same rule for logos: fill an empty one, never replace an uploaded one.
+    const logoResult = logo
+      ? await hospitals.updateOne(
+          { name: h.name, $or: [{ logo: { $exists: false } }, { logo: "" }, { logo: { $regex: "^/hospitals/" } }] },
+          { $set: { logo } }
+        )
+      : { modifiedCount: 0 };
+    const changed = result.modifiedCount || logoResult.modifiedCount;
+    console.log(`${changed ? "updated" : result.matchedCount ? "unchanged" : "skipped"}  ${h.name}`);
   }
 } finally {
   await client.close();
