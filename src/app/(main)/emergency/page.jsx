@@ -80,17 +80,17 @@ const EmergencyPage = async ({ searchParams }) => {
                     {shown.length === 0 ? (
                         <p className="text-sm text-base-content/50">{t("noHospitals")}</p>
                     ) : (
-                        <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {shown.map((h) => (
-                                <div key={h._id} className="bg-base-100 border border-base-300 rounded-2xl p-4 flex items-center justify-between gap-3">
+                                <div key={h._id} className="min-w-0 bg-base-100 border border-base-300 rounded-2xl p-4 flex flex-wrap lg:flex-nowrap items-center gap-3">
                                     <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-base-200">
                                         <HospitalCover hospital={h} sizes="112px" className="[&_span]:text-base" />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <Link href={`/hospitals/${h._id}`} className="font-bold hover:text-primary block truncate">{h.name}</Link>
+                                        <Link href={`/hospitals/${h._id}`} className="font-bold leading-snug hover:text-primary line-clamp-2">{h.name}</Link>
                                         <p className="text-xs text-base-content/50">{h.city}</p>
                                     </div>
-                                    <a href={`tel:${h.emergencyPhone}`} className="btn btn-error btn-sm btn-outline gap-1.5 shrink-0">
+                                    <a href={`tel:${h.emergencyPhone}`} className="btn btn-error btn-sm btn-outline gap-1.5 shrink-0 w-full lg:w-auto">
                                         <FiPhoneCall size={13} /> {h.emergencyPhone}
                                     </a>
                                 </div>
@@ -105,7 +105,25 @@ const EmergencyPage = async ({ searchParams }) => {
                     {ambulances.length === 0 ? (
                         <p className="text-sm text-base-content/50">{t("noAmbulances")}</p>
                     ) : (
-                        <div className="overflow-x-auto bg-base-100 border border-base-300 rounded-2xl">
+                        <>
+                        <ul className="md:hidden space-y-2">
+                            {ambulances.map((a) => (
+                                <li key={a._id} className="bg-base-100 border border-base-300 rounded-2xl p-3 flex flex-col gap-2">
+                                    <div className="min-w-0">
+                                        <p className="font-semibold leading-snug">{a.hospital?.name}</p>
+                                        <p className="text-[11px] text-base-content/45">{a.hospital?.city}</p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="badge badge-sm badge-outline">{th.has(`ambulanceTypes.${a.type}`) ? th(`ambulanceTypes.${a.type}`) : a.type}</span>
+                                        <span className={`badge badge-sm ${a.available ? "badge-success" : "badge-ghost"}`}>
+                                            {a.available ? th("available") : th("onCall")}
+                                        </span>
+                                        <a href={`tel:${a.phone}`} className="btn btn-sm btn-error gap-1 ml-auto"><FiPhoneCall size={12} /> {a.phone}</a>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="hidden md:block overflow-x-auto bg-base-100 border border-base-300 rounded-2xl">
                             <table className="table table-sm">
                                 <thead><tr><th>{t("hospital")}</th><th>{t("type")}</th><th>{t("status")}</th><th className="text-right">{t("call")}</th></tr></thead>
                                 <tbody>
@@ -129,6 +147,7 @@ const EmergencyPage = async ({ searchParams }) => {
                                 </tbody>
                             </table>
                         </div>
+                        </>
                     )}
                     <LinkPagination page={apage} totalPages={fleet.totalPages} hrefFor={(a) => hrefFor({ a })} label={th("ambulances")} />
                 </section>

@@ -13,7 +13,7 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/lib/i18n";
 import Pagination from "@/components/shared/Pagination";
 
-const field = "input input-bordered input-sm w-full rounded-lg";
+const field = "input input-bordered input-sm w-full min-w-0 rounded-lg";
 
 const tokenOrNull = async (session) => {
     if (!session) return null;
@@ -192,8 +192,8 @@ const BloodDonors = () => {
     };
 
     return (
-        <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4 min-w-0">
                 <div className="bg-base-100 border border-base-300 rounded-2xl p-4 space-y-3">
                     <GroupChips value={group} onChange={(g) => { setGroup(g); setPage(1); }} />
                     <div className="relative">
@@ -209,13 +209,13 @@ const BloodDonors = () => {
                 )}
 
                 {!result ? (
-                    <div className="grid sm:grid-cols-2 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}</div>
                 ) : result.donors.length === 0 ? (
                     <p className="text-center text-sm text-base-content/50 py-12">{t("none")}</p>
                 ) : (
                     <>
                         <p className="text-xs text-base-content/50">{t("count", { count: result.total })}</p>
-                        <div className="grid sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {result.donors.map((d) => (
                                 <div key={d._id} className="bg-base-100 border border-base-300 rounded-2xl p-4 flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-xl bg-error/10 text-error font-black flex items-center justify-center shrink-0">{d.bloodGroup}</div>
@@ -266,7 +266,7 @@ const BloodDonors = () => {
                 </section>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 min-w-0">
                 {session ? (
                     <>
                         <DonorForm session={session} />
